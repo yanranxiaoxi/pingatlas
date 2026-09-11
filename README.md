@@ -1,93 +1,184 @@
+[English](./README.md) | [简体中文](./README.zh-Hans.md)
+
 # PingAtlas
 
+> [!WARNING]
+> This project was written through **Vibe Coding**. Although the code has been
+> reviewed by humans, it cannot be guaranteed to be 100% controlled or
+> bug-free. Use it at your own risk.
 
+An online network-testing service built on [Globalping](https://globalping.io), running on the project's own Node.js + TypeScript framework. It ships a measurement console (ping / traceroute / DNS / MTR / HTTP), a live result viewer, optional OpenID Connect sign-in, and PWA support.
 
-## Getting started
+No map is rendered on purpose — Mainland China requires a map-approval number (审图号) to publish online maps, so the UI only shows the **probe list** and the **measurement result details**.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Features
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- **Five measurement types** — `ping`, `traceroute`, `dns`, `mtr`, `http`, each exposing the option set of the upstream API (packets, protocol, port, IP version, query type, resolver, HTTP method/path/query/headers, timeout, …)
+- **Probe selection** — free-form `magic` target plus continent / country / city / ASN / network / tag filters, with **3 probes by default** (clamped to the upstream hard limit of the current mode: 50 anonymous, 500 authenticated)
+- **Location autocomplete** — every location field is an ARIA combobox backed by a de-duplicated probe index (`GET /api/probes`, no Globalping quota spent). Matching is fuzzy: exact > prefix > substring > **subsequence**, so `Fuzho` still finds `Fuzhou`. Probe counts are shown per suggestion, personal `u-*` tags are de-prioritised, and keyboard navigation (↑/↓/Enter/Esc) works alongside pointer selection. The index is cached in memory, then in `localStorage` (24 h TTL), then by the browser's HTTP cache (the endpoint sends `max-age=300`)
+- **Result viewer without a map**:
+  - Probe list: one card per probe with country / city / ASN / network / tags
+  - Per-probe detail: ping RTT timing bars & packet loss, traceroute/MTR hops, DNS answers, HTTP status / headers / body preview / timings / TLS
+  - Collapsible raw output for every probe
+  - Live progress while the measurement is running, plus structured upstream error rendering
+- **Dual-path requests** (the core design):
+  - The browser calls `https://api.globalping.io` **directly** with the visitor's own anonymous quota (250/hour, per IP) — the default path
+  - Once the local quota is used up (or more than 50 probes are requested), requests transparently fall back to this service's `/api/*` proxy, which injects the server-side `GP_TOKEN`
+  - Both quota meters are rendered at the bottom-left; the server-token path is only reachable while signed in
+- **OpenID Connect sign-in only** — standard authorization code flow + S256 PKCE (`openid-client` v6). Verified with Keycloak; other IdPs can be adapted via environment variables. Shows the signed-in user name (`preferred_username`)
+- **PWA** — `manifest.webmanifest` plus a service worker with versioned app-shell caching
+- **i18n** — Simplified Chinese & English built in; adding a language requires only a locale file plus one registration entry
+- **Light / dark theme** — follows the system preference and can be toggled manually
+- Responsive layout across desktop and mobile — below 620px wide the result tables reflow into stacked cards: long hostnames wrap while numeric columns stay on a single line, so nothing scrolls sideways
 
-## Add your files
+## Quota strategy
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+Both sides expose a quota, and the front end decides which one to spend:
+
+| Meter | Actor | Source | Notes |
+| --- | --- | --- | --- |
+| Left | `ip` (your own) | `GET {apiUrl}/v1/limits` called directly from the browser | 250/h per public IP; free to poll (does not consume quota) |
+| Right | `user` (server token) | `GET /api/limits` through this service | Only shown once signed in and `GP_TOKEN` is configured; may also report `credits.remaining` |
+
+Routing rules, evaluated for every measurement:
+
+1. If the direct API is unreachable → proxy (or report "no quota channel available")
+2. If the local quota `remaining <= 0` → proxy
+3. If more probes are requested than the anonymous limit allows (>50) → proxy
+4. If the visitor explicitly switched to the proxy meter → proxy
+5. Otherwise → direct (local quota)
+
+Additional behaviour:
+
+- As long as the local quota has any remainder left, the direct path is used **by default**.
+- The local quota is refreshed by a **5-minute heartbeat**, and precisely re-checked 2 s after the reported `reset` time when `remaining` hits 0. Returning to the tab also triggers a re-check (throttled to 30 s).
+- Every measurement response updates the meter in place from the `X-RateLimit-*` headers, so no extra requests are needed.
+- The visitor can **click the meter** to force the proxy path, but the moment the local quota resets (observed as `remaining` going from 0 to a positive value), the preference is reset automatically and a toast notifies the user that the local quota is available again.
+
+## How requests flow
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.soraharu.com/XiaoXi/pingatlas.git
-git branch -M main
-git push -uf origin main
+Browser ── local quota left ────────► {GP_API_URL}/v1/measurements       (direct, anonymous ip limit)
+       │                              {GP_API_URL}/v1/measurements/{id}   (public read, no cost)
+       │
+       └── local quota exhausted ──► /api/measurements ─► {GP_API_URL}/…   (server injects GP_TOKEN)
+           (also used when >50 probes are requested, or when the direct API is unreachable)
 ```
 
-## Integrate with your tools
+- `GET /api/config` returns `{ apiUrl, proxyAvailable, maxProbes: { direct, proxy } }` so the browser knows where to call directly and how many probes it may request per mode.
+- `GET /api/limits`, `POST /api/measurements`, `GET /api/measurements/:id` proxy the upstream response transparently (same status code & JSON body) and pass through the rate-limit headers. `GP_TOKEN` is never sent to the browser.
+- `GET /api/probes` is the only endpoint that talks to the upstream *without* the token: it fetches `GET /v1/probes` once, folds the 5000+ entries into a de-duplicated index (countries / regions / cities / networks / tags, 92 KB JSON, `Cache-Control: public, max-age=300` plus an in-process 5-minute cache), and serves it to the browser for autocomplete. It spends no Globalping quota. If the upstream is unreachable a stale copy is served; if there is none, the endpoint answers `502` and the front end silently disables suggestions.
+- Polling is throttled as required by the upstream: 500 ms after the previous response arrives, at most 2 requests/second per measurement.
 
-* [Set up project integrations](https://gitlab.soraharu.com/XiaoXi/pingatlas/-/settings/integrations)
+## Environment variables
 
-## Collaborate with your team
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `GP_API_URL` | no | `https://api.globalping.io` | Upstream Globalping base URL (no `/v1`) |
+| `GP_TOKEN` | no | — | Server-side Globalping access token. When empty the proxy is disabled entirely (`proxyAvailable: false`) and only the local meter is shown |
+| `GP_TIMEOUT` | no | `30000` | Upstream request timeout in milliseconds |
+| `OIDC_ISSUER` | no* | — | OpenID Provider issuer URL (e.g. `https://sso.example.com/realms/master`) |
+| `OIDC_CLIENT_ID` | no* | — | OIDC client id |
+| `OIDC_CLIENT_SECRET` | no* | — | OIDC client secret |
+| `OIDC_REDIRECT_URI` | no* | — | Callback URI, must exactly match the IdP redirect URI, e.g. `https://your.domain/api/auth/callback` |
+| `OIDC_SCOPE` | no | `openid profile email` | Requested scope |
+| `OIDC_USERNAME_CLAIM` | no | `preferred_username` | Claim used as the user name (use `name`/`sub` for IdPs without it) |
+| `OIDC_PROVIDER_NAME` | no | localized default | SSO provider name shown on the login dialog button |
+| `OIDC_POST_LOGOUT_REDIRECT_URI` | no | site root of `OIDC_REDIRECT_URI` | Where the IdP returns after "also sign out of SSO"; register it at the IdP |
+| `SESSION_SECRET` | no* | — | ≥32 random chars used to sign the session cookie |
+| `SESSION_COOKIE_NAME` | no | `pa_session` | Session cookie name |
+| `SESSION_TTL` | no | `604800` | Session lifetime in seconds |
+| `STATIC_DIR` | no | auto | Static directory (auto resolves: `dist/public` in prod, `public` in dev) |
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+\* Sign-in is disabled unless all OIDC fields **and** `SESSION_SECRET` are set — the sign-in button is then hidden, and with it the whole proxy path.
 
-## Test and Deploy
+Other inherited server variables: `SERVER_HOST`, `SERVER_PORT` (default `80`; the Docker image sets `3001`), `LOG_LEVEL`, `PROJECT_NAME`, `SERVER_NAME`, `ENV_PRODUCT`.
 
-Use the built-in continuous integration in GitLab.
+## Quick start
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+```bash
+pnpm install
+pnpm build        # backend → dist/index.js (ESM) + frontend → dist/public/ (single build)
+pnpm dev          # backend dev (nodemon + tsx, serves ./public) + frontend esbuild watch
+```
 
-***
+Run:
 
-# Editing this README
+```bash
+GP_TOKEN='…' \
+SESSION_SECRET='…' \
+node dist/index.js
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+Visit http://localhost:80 (or `SERVER_PORT`) once started. No configuration is required to run measurements — the browser talks to the public Globalping API directly; `GP_TOKEN` only adds the signed-in fallback path.
 
-## Suggestions for a good README
+## Testing
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+Jest (ESM + ts-jest) covers the backend framework glue, the Globalping proxy controller, the OIDC service and every frontend module, plus end-to-end runs against a real `node:http` server.
 
-## Name
-Choose a self-explaining name for your project.
+```bash
+pnpm test            # run the whole suite once (33 suites / 839 cases)
+pnpm test:watch      # watch mode
+pnpm test:coverage   # write coverage/ (html + lcov + text summary)
+pnpm lint            # ESLint (includes the test files)
+pnpm typecheck       # tsc --noEmit
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Layout: `test/backend` (framework utils, router, venation, config, logger), `test/service` (OIDC), `test/frontend` (jsdom SPA modules), `test/integration` (controllers + real HTTP server), `test/helpers` and `test/setup` (shared fixtures and baseline env). Coverage thresholds are not enforced, but the suite currently sits at ~98.9% lines and ~98.7% statements.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+## OIDC: Keycloak example
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+1. In Keycloak create a client:
+   - **Access Type / Client authentication**: `confidential`
+   - **Standard flow**: enabled (Authorization Code + PKCE S256)
+   - **Valid redirect URIs**: `https://your.domain/api/auth/callback`
+2. Export/set env vars: `OIDC_ISSUER` (realm URL), `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`, and a `SESSION_SECRET`.
+3. Restart the service; the top-right area shows *Sign in* → Keycloak login → the user name (`preferred_username`) plus *Sign out*, and the second quota meter appears at the bottom-left.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+For other IdPs (Authentik, Google, GitLab OIDC, …) adjust `OIDC_ISSUER` and, if needed, `OIDC_USERNAME_CLAIM`.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## API endpoints
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/config` | `{ apiUrl, proxyAvailable, maxProbes }` (public) |
+| `GET` | `/api/auth/status` | `{ loggedIn, authEnabled, user }` |
+| `GET` | `/api/auth/login` | 302 → IdP |
+| `GET` | `/api/auth/callback` | OIDC callback → session cookie → `/` |
+| `GET` | `/api/auth/logout` | clears session → `/` |
+| `GET` | `/api/limits` | proxied `GET /v1/limits` of the server token (login + `GP_TOKEN` required) |
+| `GET` | `/api/probes` | de-duplicated probe index for location autocomplete (public, no token, no quota) |
+| `POST` | `/api/measurements` | proxied `POST /v1/measurements` (login + `GP_TOKEN` required) |
+| `GET` | `/api/measurements/:id` | proxied `GET /v1/measurements/{id}` (login + `GP_TOKEN` required) |
+| any other GET | `/` or static files | front-end page & assets |
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## Add a language
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+1. Create `public/locales/<code>.json` modeled on `zh-Hans.json`.
+2. Register the language code in `SUPPORTED_LANGS` inside `src/frontend/i18n.ts`.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## PWA notes
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+The service worker keeps a versioned app-shell cache and prefers the network (`no-cache` for html/js/css) with cache fallback — bump `CACHE_VERSION` in `public/sw.js` when the shell changes. PWA requires HTTPS (or `localhost`).
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Docker
 
-## License
-For open source projects, say how it is licensed.
+```bash
+docker build -t pingatlas .
+docker run -p 3001:3001 \
+  -e GP_TOKEN='…' \
+  -e SESSION_SECRET='…' \
+  pingatlas
+```
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+The image runs `pnpm install --prod` and copies `dist/` (backend + `public/`).
+
+## Scope & boundaries
+
+- Only OIDC sign-in (no local accounts), no per-user Globalping token input, no server-side quota accounting.
+- No map, by design (map-approval number requirement in Mainland China).
+- No measurement history / sharing / dashboard links — results live only in the current page.
+- Sessions are stateless (restart invalidates them).
+- The proxy never stores the upstream response body; only the session user and upstream errors are logged.
+
+See [PLAN.md](./PLAN.md) for the full design notes.

@@ -1,0 +1,7 @@
+allowBuilds:
+  # Jest 的可选原生加速依赖（文件监听 / 模块解析），
+  # 不执行构建脚本时会自动回退到纯 JS 实现，因此显式关闭以避免安装失败
+  '@parcel/watcher': false
+  esbuild: true
+  simple-git-hooks: true
+  unrs-resolver: false

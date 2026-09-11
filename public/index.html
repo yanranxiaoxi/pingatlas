@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+	<title>PingAtlas · Globalping 在线网络测试</title>
+	<meta name="description" content="基于 Globalping 的在线网络测试工具：Ping、Traceroute、DNS、MTR、HTTP 全球多点测量" />
+	<meta name="theme-color" content="#ffffff" />
+	<link rel="manifest" href="/manifest.webmanifest" />
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+	<link rel="apple-touch-icon" href="/icons/icon-192.png" />
+	<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+	<header class="topbar">
+		<div class="container topbar-inner">
+			<a class="brand" href="/">
+				<span class="brand-name">PingAtlas</span>
+				<span class="brand-sub">Globalping</span>
+			</a>
+			<div class="topbar-actions">
+				<select id="lang-select" class="select select-sm" data-i18n-aria-label="langLabel" aria-label="Language"></select>
+				<button id="theme-toggle" class="icon-btn" type="button" data-i18n-aria-label="themeToggle" aria-label="Theme">☾</button>
+				<div id="user-area" class="user-area"></div>
+			</div>
+		</div>
+	</header>
+
+	<main class="container layout">
+		<section class="panel form-panel">
+			<form id="measure-form" novalidate>
+				<div class="field field-target">
+					<label for="target" data-i18n="target">Target</label>
+					<input
+						id="target"
+						name="target"
+						class="input mono input-target"
+						type="text"
+						autocomplete="off"
+						autocapitalize="off"
+						spellcheck="false"
+						required
+						data-i18n-placeholder="targetPlaceholder"
+						placeholder="example.com / 1.1.1.1 / https://example.com/path"
+					/>
+				</div>
+
+				<fieldset id="type-tabs" class="type-tabs">
+					<legend class="sr-only" data-i18n="type">Type</legend>
+					<label class="type-tab">
+						<input type="radio" name="type" value="ping" checked />
+						<span data-i18n="typePing">Ping</span>
+					</label>
+					<label class="type-tab">
+						<input type="radio" name="type" value="traceroute" />
+						<span data-i18n="typeTraceroute">Traceroute</span>
+					</label>
+					<label class="type-tab">
+						<input type="radio" name="type" value="dns" />
+						<span data-i18n="typeDns">DNS</span>
+					</label>
+					<label class="type-tab">
+						<input type="radio" name="type" value="mtr" />
+						<span data-i18n="typeMtr">MTR</span>
+					</label>
+					<label class="type-tab">
+						<input type="radio" name="type" value="http" />
+						<span data-i18n="typeHttp">HTTP</span>
+					</label>
+				</fieldset>
+
+				<div class="grid-2">
+					<div class="field">
+						<label for="limit" data-i18n="limit">Probes</label>
+						<div class="input-row">
+							<input id="limit" name="limit" class="input" type="number" min="1" max="50" step="1" value="3" />
+							<select id="limit-presets" class="select" data-i18n-aria-label="limitPresets" aria-label="Presets"></select>
+						</div>
+						<p id="limit-hint" class="hint"></p>
+					</div>
+					<div class="field">
+						<label for="timeout" data-i18n="timeout">Timeout</label>
+						<select id="timeout" name="timeout" class="select">
+							<option value="5">5 s</option>
+							<option value="10" selected>10 s</option>
+							<option value="15">15 s</option>
+							<option value="20">20 s</option>
+							<option value="30">30 s</option>
+						</select>
+					</div>
+				</div>
+
+				<details class="advanced" open>
+					<summary data-i18n="locationSection">Location</summary>
+					<div class="grid-2">
+						<div class="field">
+							<label for="loc-magic" data-i18n="locMagic">Magic</label>
+							<input id="loc-magic" class="input" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="locMagicPlaceholder" placeholder="Germany / AS13335 / Europe / aws-us-east-1" />
+						</div>
+						<div class="field">
+							<label for="loc-continent" data-i18n="locContinent">Continent</label>
+							<select id="loc-continent" class="select">
+								<option value="" data-i18n="optAny">Any</option>
+								<option value="AF" data-i18n="continentAF">Africa</option>
+								<option value="AN" data-i18n="continentAN">Antarctica</option>
+								<option value="AS" data-i18n="continentAS">Asia</option>
+								<option value="EU" data-i18n="continentEU">Europe</option>
+								<option value="NA" data-i18n="continentNA">North America</option>
+								<option value="OC" data-i18n="continentOC">Oceania</option>
+								<option value="SA" data-i18n="continentSA">South America</option>
+							</select>
+						</div>
+						<div class="field">
+							<label for="loc-country" data-i18n="locCountry">Country</label>
+							<input id="loc-country" class="input" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="locCountryPlaceholder" placeholder="DE / Poland" />
+						</div>
+						<div class="field">
+							<label for="loc-city" data-i18n="locCity">City</label>
+							<input id="loc-city" class="input" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="locCityPlaceholder" placeholder="Frankfurt" />
+						</div>
+						<div class="field">
+							<label for="loc-asn" data-i18n="locAsn">ASN</label>
+							<input id="loc-asn" class="input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" data-i18n-placeholder="locAsnPlaceholder" placeholder="13335" />
+						</div>
+						<div class="field">
+							<label for="loc-network" data-i18n="locNetwork">Network</label>
+							<input id="loc-network" class="input" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="locNetworkPlaceholder" placeholder="Cloudflare" />
+						</div>
+						<div class="field field-wide">
+							<label for="loc-tags" data-i18n="locTags">Tags</label>
+							<input id="loc-tags" class="input" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="locTagsPlaceholder" placeholder="eyeball, datacenter" />
+						</div>
+					</div>
+					<p class="hint" data-i18n="locHint"></p>
+				</details>
+
+				<details class="advanced">
+					<summary data-i18n="optionsSection">Options</summary>
+
+					<div class="option-group" data-for="ping">
+						<div class="grid-3">
+							<div class="field">
+								<label for="ping-packets" data-i18n="packets">Packets</label>
+								<input id="ping-packets" class="input" type="number" min="1" max="16" step="1" data-i18n-placeholder="optDefaultPlaceholder" placeholder="1" />
+							</div>
+							<div class="field">
+								<label for="ping-protocol" data-i18n="protocol">Protocol</label>
+								<select id="ping-protocol" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="ICMP">ICMP</option>
+									<option value="TCP">TCP</option>
+								</select>
+							</div>
+							<div class="field">
+								<label for="ping-port" data-i18n="port">Port</label>
+								<input id="ping-port" class="input" type="number" min="0" max="65535" step="1" data-i18n-placeholder="optDefaultPlaceholder" placeholder="80" />
+							</div>
+							<div class="field">
+								<label for="ping-ipv" data-i18n="ipVersion">IP version</label>
+								<select id="ping-ipv" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="4">IPv4</option>
+									<option value="6">IPv6</option>
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<div class="option-group" data-for="traceroute" hidden>
+						<div class="grid-3">
+							<div class="field">
+								<label for="tr-protocol" data-i18n="protocol">Protocol</label>
+								<select id="tr-protocol" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="ICMP">ICMP</option>
+									<option value="TCP">TCP</option>
+									<option value="UDP">UDP</option>
+								</select>
+							</div>
+							<div class="field">
+								<label for="tr-port" data-i18n="port">Port</label>
+								<input id="tr-port" class="input" type="number" min="0" max="65535" step="1" data-i18n-placeholder="optDefaultPlaceholder" placeholder="80" />
+							</div>
+							<div class="field">
+								<label for="tr-ipv" data-i18n="ipVersion">IP version</label>
+								<select id="tr-ipv" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="4">IPv4</option>
+									<option value="6">IPv6</option>
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<div class="option-group" data-for="dns" hidden>
+						<div class="grid-3">
+							<div class="field">
+								<label for="dns-qtype" data-i18n="dnsQueryType">Query type</label>
+								<select id="dns-qtype" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="A">A</option>
+									<option value="AAAA">AAAA</option>
+									<option value="ANY">ANY</option>
+									<option value="CNAME">CNAME</option>
+									<option value="DNSKEY">DNSKEY</option>
+									<option value="DS">DS</option>
+									<option value="HTTPS">HTTPS</option>
+									<option value="MX">MX</option>
+									<option value="NS">NS</option>
+									<option value="NSEC">NSEC</option>
+									<option value="PTR">PTR</option>
+									<option value="RRSIG">RRSIG</option>
+									<option value="SOA">SOA</option>
+									<option value="SRV">SRV</option>
+									<option value="TXT">TXT</option>
+								</select>
+							</div>
+							<div class="field">
+								<label for="dns-resolver" data-i18n="dnsResolver">Resolver</label>
+								<input id="dns-resolver" class="input mono" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="dnsResolverPlaceholder" placeholder="1.1.1.1" />
+							</div>
+							<div class="field">
+								<label for="dns-protocol" data-i18n="protocol">Protocol</label>
+								<select id="dns-protocol" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="UDP">UDP</option>
+									<option value="TCP">TCP</option>
+									<option value="HTTPS">HTTPS</option>
+								</select>
+							</div>
+							<div class="field">
+								<label for="dns-port" data-i18n="port">Port</label>
+								<input id="dns-port" class="input" type="number" min="0" max="65535" step="1" data-i18n-placeholder="optDefaultPlaceholder" placeholder="53" />
+							</div>
+							<div class="field">
+								<label for="dns-ipv" data-i18n="ipVersion">IP version</label>
+								<select id="dns-ipv" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="4">IPv4</option>
+									<option value="6">IPv6</option>
+								</select>
+							</div>
+							<div class="field field-check">
+								<label class="check">
+									<input id="dns-trace" type="checkbox" />
+									<span data-i18n="dnsTrace">Trace</span>
+								</label>
+							</div>
+						</div>
+					</div>
+
+					<div class="option-group" data-for="mtr" hidden>
+						<div class="grid-3">
+							<div class="field">
+								<label for="mtr-packets" data-i18n="packets">Packets</label>
+								<input id="mtr-packets" class="input" type="number" min="1" max="16" step="1" data-i18n-placeholder="optDefaultPlaceholder" placeholder="3" />
+							</div>
+							<div class="field">
+								<label for="mtr-protocol" data-i18n="protocol">Protocol</label>
+								<select id="mtr-protocol" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="ICMP">ICMP</option>
+									<option value="TCP">TCP</option>
+									<option value="UDP">UDP</option>
+								</select>
+							</div>
+							<div class="field">
+								<label for="mtr-port" data-i18n="port">Port</label>
+								<input id="mtr-port" class="input" type="number" min="0" max="65535" step="1" data-i18n-placeholder="optDefaultPlaceholder" placeholder="80" />
+							</div>
+							<div class="field">
+								<label for="mtr-ipv" data-i18n="ipVersion">IP version</label>
+								<select id="mtr-ipv" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="4">IPv4</option>
+									<option value="6">IPv6</option>
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<div class="option-group" data-for="http" hidden>
+						<div class="grid-3">
+							<div class="field">
+								<label for="http-method" data-i18n="httpMethod">Method</label>
+								<select id="http-method" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="GET">GET</option>
+									<option value="HEAD">HEAD</option>
+									<option value="OPTIONS">OPTIONS</option>
+								</select>
+							</div>
+							<div class="field">
+								<label for="http-path" data-i18n="httpPath">Path</label>
+								<input id="http-path" class="input mono" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="httpPathPlaceholder" placeholder="/index.html" />
+							</div>
+							<div class="field">
+								<label for="http-query" data-i18n="httpQuery">Query</label>
+								<input id="http-query" class="input mono" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="httpQueryPlaceholder" placeholder="foo=bar" />
+							</div>
+							<div class="field">
+								<label for="http-resolver" data-i18n="dnsResolver">Resolver</label>
+								<input id="http-resolver" class="input mono" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="dnsResolverPlaceholder" placeholder="1.1.1.1" />
+							</div>
+							<div class="field">
+								<label for="http-protocol" data-i18n="protocol">Protocol</label>
+								<select id="http-protocol" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="HTTP">HTTP</option>
+									<option value="HTTPS">HTTPS</option>
+									<option value="HTTP2">HTTP2</option>
+								</select>
+							</div>
+							<div class="field">
+								<label for="http-port" data-i18n="port">Port</label>
+								<input id="http-port" class="input" type="number" min="0" max="65535" step="1" data-i18n-placeholder="optDefaultPlaceholder" placeholder="443" />
+							</div>
+							<div class="field">
+								<label for="http-ipv" data-i18n="ipVersion">IP version</label>
+								<select id="http-ipv" class="select">
+									<option value="" data-i18n="optDefault">Default</option>
+									<option value="4">IPv4</option>
+									<option value="6">IPv6</option>
+								</select>
+							</div>
+							<div class="field field-wide">
+								<label for="http-headers" data-i18n="httpHeaders">Headers</label>
+								<textarea id="http-headers" class="input mono" rows="3" spellcheck="false" data-i18n-placeholder="httpHeadersPlaceholder" placeholder="Accept: */*&#10;User-Agent: PingAtlas"></textarea>
+							</div>
+						</div>
+					</div>
+				</details>
+
+				<div class="form-actions">
+					<button id="submit-btn" class="btn primary" type="submit" data-i18n="submit">Run test</button>
+					<button id="reset-btn" class="btn ghost" type="button" data-i18n="reset">Reset</button>
+				</div>
+			</form>
+		</section>
+
+		<section class="panel result-panel">
+			<div id="results" class="results" aria-live="polite"></div>
+		</section>
+	</main>
+
+	<footer class="footer">
+		<div class="container footer-inner">
+			<div id="quota-meters" class="quota-meters" data-mode="direct"></div>
+			<div class="footer-meta">
+				<p id="footer-note" class="footer-note"></p>
+				<p id="footer-credit" class="footer-credit"></p>
+				<p id="footer-version" class="footer-version mono"></p>
+			</div>
+		</div>
+	</footer>
+
+	<noscript>
+		<p class="noscript">Please enable JavaScript to use PingAtlas.</p>
+	</noscript>
+	<div id="toast-box" class="toast-box"></div>
+
+	<script type="module" src="/assets/main-A5YNHSRM.js"></script>
+</body>
+</html>

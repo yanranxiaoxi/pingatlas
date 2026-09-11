@@ -1,0 +1,76 @@
+stages:
+  - npm
+  - docker
+
+# 流水线策略：
+#   - 仅默认分支（主分支）的 push 创建流水线
+#   - Merge Request、tag 推送、其它分支 push 一律不创建流水线，
+#     因此不可能触发任何 docker 构建/推送
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - when: never
+
+# #######################
+#          npm          #
+# #######################
+
+npm-build:
+  stage: npm
+  tags:
+    - linux
+    - docker
+  image: docker.io/library/node:24
+  script:
+    - npm install --global pnpm@11
+    - pnpm install --frozen-lockfile
+    - pnpm typecheck
+    - pnpm lint
+    - pnpm test
+    - pnpm run build
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - node_modules/
+  artifacts:
+    name: dist
+    expire_in: 1 day
+    paths:
+      - ./dist/
+
+# #######################
+#         Docker        #
+# #######################
+
+docker-build:
+  stage: docker
+  tags:
+    - linux
+    - docker
+    - amd64
+    - mpc
+  image: docker.io/library/docker:cli
+  services:
+    - name: docker.io/library/docker:dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ''
+    CONTAINER_IMAGE_NAME: pingatlas
+    IMAGE_TAG: latest
+  dependencies:
+    - npm-build
+  before_script:
+    - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USER" --password-stdin docker.io
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+  script:
+    # dist 来自 npm-build artifacts
+    - docker build --pull --provenance=false --sbom=false -t "$CONTAINER_IMAGE_NAME:$IMAGE_TAG" .
+    # Docker Hub
+    - docker tag $CONTAINER_IMAGE_NAME:$IMAGE_TAG docker.io/$DOCKERHUB_USER/$CONTAINER_IMAGE_NAME:$IMAGE_TAG
+    - docker push docker.io/$DOCKERHUB_USER/$CONTAINER_IMAGE_NAME:$IMAGE_TAG
+    # GitLab 私有仓库
+    - docker tag $CONTAINER_IMAGE_NAME:$IMAGE_TAG $CI_REGISTRY_IMAGE:$IMAGE_TAG
+    - docker push $CI_REGISTRY_IMAGE:$IMAGE_TAG

@@ -1,0 +1,12 @@
+.git
+.gitlab-ci.yml
+.gitlab-ci.yml.example
+node_modules
+logs
+.env
+config
+src
+public/assets
+*.map
+.eslintcache
+debug.log

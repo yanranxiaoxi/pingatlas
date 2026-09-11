@@ -1,0 +1,57 @@
+{
+	"name": "pingatlas",
+	"type": "module",
+	"version": "1.0.0",
+	"packageManager": "pnpm@11.7.0",
+	"main": "index.js",
+	"engines": {
+		"node": ">=20.19"
+	},
+	"scripts": {
+		"dev": "concurrently -k -n backend,frontend \"tsx ./config/esbuild.prod.ts --watch\" \"nodemon --exec tsx src/entry/index.ts\"",
+		"dev:server": "nodemon --exec tsx src/entry/index.ts",
+		"build": "rimraf ./dist/ && tsx ./config/esbuild.prod.ts",
+		"build:watch": "tsx ./config/esbuild.prod.ts --watch",
+		"gen:icons": "tsx ./config/gen-icons.ts",
+		"typecheck": "tsc --noEmit",
+		"test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+		"test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+		"test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+		"lint": "eslint",
+		"fix": "eslint --fix"
+	},
+	"dependencies": {
+		"dotenv": "^17.2.2",
+		"formidable": "^3.5.4",
+		"jose": "^6.2.12",
+		"openid-client": "^6.8.8",
+		"parameter": "^3.7.0",
+		"winston": "^3.19.0",
+		"winston-daily-rotate-file": "^5.0.0"
+	},
+	"devDependencies": {
+		"@antfu/eslint-config": "^5.4.1",
+		"@types/formidable": "^3.4.5",
+		"@types/jest": "^30.0.0",
+		"@types/node": "^24.5.2",
+		"@types/parameter": "^3.6.7",
+		"concurrently": "^9.2.1",
+		"esbuild": "^0.25.10",
+		"eslint": "^9.36.0",
+		"jest": "^30.5.1",
+		"jest-environment-jsdom": "^30.5.1",
+		"lint-staged": "^16.1.6",
+		"nodemon": "^3.1.10",
+		"rimraf": "^6.0.1",
+		"simple-git-hooks": "^2.13.1",
+		"ts-jest": "^29.4.12",
+		"tsx": "^4.20.5",
+		"typescript": "^5.9.2"
+	},
+	"simple-git-hooks": {
+		"pre-commit": "npx lint-staged"
+	},
+	"lint-staged": {
+		"*.{js,ts,mjs,cjs}": "eslint --fix"
+	}
+}
