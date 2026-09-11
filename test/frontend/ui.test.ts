@@ -280,9 +280,13 @@ describe('countryName', () => {
 	});
 
 	it('未知但合法的两位代码返回本地化占位名', () => {
-		const name = countryName('ZZ');
-		expect(typeof name).toBe('string');
-		expect(name).toBe('未知地区');
+		expect(countryName('ZZ', 'zh-Hans')).toBe('未知地区');
+		expect(countryName('ZZ', 'en')).toBe('Unknown Region');
+	});
+
+	it('按显式语言返回对应语言的国家名', () => {
+		expect(countryName('JP', 'zh-Hans')).toBe('日本');
+		expect(countryName('JP', 'en')).toBe('Japan');
 	});
 
 	it('非法代码回退为原输入（Intl 抛错路径）', () => {

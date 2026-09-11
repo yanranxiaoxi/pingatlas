@@ -183,6 +183,6 @@
 	"logoutConfirm": "仅退出本站登录，还是同时退出单点登录会话？",
 	"logoutLocal": "仅退出本站",
 	"logoutSso": "同时退出单点登录",
-	"footerCredit": "[小汐](https://soraharu.com/) 为 Globalping 的 [User Leader](https://globalping.io/leaderboard)，持续为项目贡献 [探针节点](https://globalping.io/users/yanranxiaoxi)。",
+	"footerCredit": "[小汐](https://soraharu.com/)为 Globalping 的 [User Leader](https://globalping.io/leaderboard)，持续为项目贡献[探针节点](https://globalping.io/users/yanranxiaoxi)。",
 	"footerNote": "测量数据由 Globalping（api.globalping.io）提供，PingAtlas 不存储任何探测数据、也不自行执行测量。"
 }

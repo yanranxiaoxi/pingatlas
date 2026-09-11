@@ -5,6 +5,7 @@ import type { AuthStatus } from '../../src/frontend/types';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 jest.unstable_mockModule('../../src/frontend/i18n', () => ({
+	getLang: () => 'en',
 	t: (key: string) => key,
 }));
 

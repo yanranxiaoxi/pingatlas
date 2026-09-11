@@ -1,3 +1,5 @@
+import { getLang } from './i18n';
+
 export type ToastType = 'info' | 'error' | 'success';
 
 const TOAST_DURATION = 3500;
@@ -139,17 +141,28 @@ export function flagEmoji(country: string | null | undefined): string {
 	return String.fromCodePoint(...[...country.toUpperCase()].map(c => 0x1F1A5 + c.charCodeAt(0)));
 }
 
-const regionNames = typeof Intl !== 'undefined' && 'DisplayNames' in Intl
-	? new Intl.DisplayNames(undefined, { type: 'region' })
-	: null;
+const regionNames = new Map<string, Intl.DisplayNames>();
+
+/** 按界面语言取 `Intl.DisplayNames` 实例（惰性创建并缓存，宿主 locale 不参与决定） */
+function regionNamesFor(lang: string): Intl.DisplayNames | null {
+	if (typeof Intl === 'undefined' || !('DisplayNames' in Intl)) {
+		return null;
+	}
+	let names = regionNames.get(lang);
+	if (!names) {
+		names = new Intl.DisplayNames(lang, { type: 'region' });
+		regionNames.set(lang, names);
+	}
+	return names;
+}
 
 /** 国家代码 → 本地化国家名（不支持时回退代码） */
-export function countryName(country: string): string {
+export function countryName(country: string, lang: string = getLang()): string {
 	if (!country) {
 		return '';
 	}
 	try {
-		return regionNames?.of(country.toUpperCase()) ?? country;
+		return regionNamesFor(lang)?.of(country.toUpperCase()) ?? country;
 	}
 	catch {
 		return country;
