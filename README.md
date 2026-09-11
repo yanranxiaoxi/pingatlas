@@ -7,38 +7,38 @@
 > reviewed by humans, it cannot be guaranteed to be 100% controlled or
 > bug-free. Use it at your own risk.
 
-An online network-testing service built on [Globalping](https://globalping.io), running on the project's own Node.js + TypeScript framework. It ships a measurement console (ping / traceroute / DNS / MTR / HTTP), a live result viewer, optional OpenID Connect sign-in, and PWA support.
+PingAtlas is an online network-testing service built on [Globalping](https://globalping.io) and on the project's own Node.js + TypeScript framework. It provides a measurement console for ping, traceroute, DNS, MTR and HTTP, a live result viewer, optional OpenID Connect sign-in, and PWA support.
 
-No map is rendered on purpose — Mainland China requires a map-approval number (审图号) to publish online maps, so the UI only shows the **probe list** and the **measurement result details**.
+The interface presents the **probe list** and the **measurement result details**; no map view is provided, as publishing online maps in Mainland China requires a map-approval number (审图号).
 
 ## Features
 
 - **Five measurement types** — `ping`, `traceroute`, `dns`, `mtr`, `http`, each exposing the option set of the upstream API (packets, protocol, port, IP version, query type, resolver, HTTP method/path/query/headers, timeout, …)
-- **Probe selection** — free-form `magic` target plus continent / country / city / ASN / network / tag filters, with **3 probes by default** (clamped to the upstream hard limit of the current mode: 50 anonymous, 500 authenticated)
-- **Location autocomplete** — every location field is an ARIA combobox backed by a de-duplicated probe index (`GET /api/probes`, no Globalping quota spent). Matching is fuzzy: exact > prefix > substring > **subsequence**, so `Fuzho` still finds `Fuzhou`. Probe counts are shown per suggestion, personal `u-*` tags are de-prioritised, and keyboard navigation (↑/↓/Enter/Esc) works alongside pointer selection. The index is cached in memory, then in `localStorage` (24 h TTL), then by the browser's HTTP cache (the endpoint sends `max-age=300`)
-- **Result viewer without a map**:
+- **Probe selection** — free-form `magic` target plus continent / country / city / ASN / network / tag filters, with **3 probes by default**, clamped to the upstream hard limit for the current mode (50 anonymous, 500 authenticated)
+- **Location autocomplete** — every location field is an ARIA combobox backed by a de-duplicated probe index (`GET /api/probes`, which consumes no Globalping quota). Matching is fuzzy, ranked as exact > prefix > substring > **subsequence** (for example, `Fuzho` matches `Fuzhou`). Each suggestion shows its probe count, personal `u-*` tags are de-prioritised, and keyboard navigation (↑/↓/Enter/Esc) is supported alongside pointer selection. The index is cached in memory, in `localStorage` (24 h TTL) and by the browser's HTTP cache (`max-age=300`)
+- **Result viewer**:
   - Probe list: one card per probe with country / city / ASN / network / tags
   - Per-probe detail: ping RTT timing bars & packet loss, traceroute/MTR hops, DNS answers, HTTP status / headers / body preview / timings / TLS
   - Collapsible raw output for every probe
-  - Live progress while the measurement is running, plus structured upstream error rendering
-- **Dual-path requests** (the core design):
-  - The browser calls `https://api.globalping.io` **directly** with the visitor's own anonymous quota (250/hour, per IP) — the default path
-  - Once the local quota is used up (or more than 50 probes are requested), requests transparently fall back to this service's `/api/*` proxy, which injects the server-side `GP_TOKEN`
-  - Both quota meters are rendered at the bottom-left; the server-token path is only reachable while signed in
-- **OpenID Connect sign-in only** — standard authorization code flow + S256 PKCE (`openid-client` v6). Verified with Keycloak; other IdPs can be adapted via environment variables. Shows the signed-in user name (`preferred_username`)
-- **PWA** — `manifest.webmanifest` plus a service worker with versioned app-shell caching
-- **i18n** — Simplified Chinese & English built in; adding a language requires only a locale file plus one registration entry
-- **Light / dark theme** — follows the system preference and can be toggled manually
-- Responsive layout across desktop and mobile — below 620px wide the result tables reflow into stacked cards: long hostnames wrap while numeric columns stay on a single line, so nothing scrolls sideways
+  - Live progress while the measurement is running, and structured rendering of upstream errors
+- **Dual-path requests**:
+  - The browser calls `https://api.globalping.io` **directly** using the visitor's own anonymous quota (250/hour, per IP); this is the default path
+  - When the local quota is exhausted, or when more than 50 probes are requested, requests fall back to this service's `/api/*` proxy, which injects the server-side `GP_TOKEN`
+  - Both quota meters are displayed at the bottom-left; the server-token path is available only while signed in
+- **OpenID Connect sign-in only** — authorization code flow with S256 PKCE (`openid-client` v6), compatible with Keycloak and adaptable to other IdPs through environment variables; the signed-in user name (`preferred_username`) is displayed
+- **PWA** — `manifest.webmanifest` and a service worker with versioned app-shell caching
+- **i18n** — Simplified Chinese and English are built in; a new language requires one locale file and one registration entry
+- **Light / dark theme** — follows the system preference and can also be toggled manually
+- **Responsive layout** — below 620px wide, result tables reflow into stacked cards; long hostnames wrap while numeric columns remain on a single line, preventing horizontal scrolling
 
 ## Quota strategy
 
-Both sides expose a quota, and the front end decides which one to spend:
+Two quota sources are available, and the front end selects one per measurement:
 
-| Meter | Actor | Source | Notes |
+| Meter | Owner | Source | Notes |
 | --- | --- | --- | --- |
-| Left | `ip` (your own) | `GET {apiUrl}/v1/limits` called directly from the browser | 250/h per public IP; free to poll (does not consume quota) |
-| Right | `user` (server token) | `GET /api/limits` through this service | Only shown once signed in and `GP_TOKEN` is configured; may also report `credits.remaining` |
+| Left | `ip` (your own) | `GET {apiUrl}/v1/limits`, called directly from the browser | 250/h per public IP; polling does not consume quota |
+| Right | `user` (server token) | `GET /api/limits` through this service | Displayed only when signed in and `GP_TOKEN` is configured; may additionally report `credits.remaining` |
 
 Routing rules, evaluated for every measurement:
 
@@ -50,10 +50,10 @@ Routing rules, evaluated for every measurement:
 
 Additional behaviour:
 
-- As long as the local quota has any remainder left, the direct path is used **by default**.
-- The local quota is refreshed by a **5-minute heartbeat**, and precisely re-checked 2 s after the reported `reset` time when `remaining` hits 0. Returning to the tab also triggers a re-check (throttled to 30 s).
-- Every measurement response updates the meter in place from the `X-RateLimit-*` headers, so no extra requests are needed.
-- The visitor can **click the meter** to force the proxy path, but the moment the local quota resets (observed as `remaining` going from 0 to a positive value), the preference is reset automatically and a toast notifies the user that the local quota is available again.
+- The direct path is used **by default** while the local quota has remaining capacity.
+- The local quota is refreshed by a **5-minute heartbeat**, and re-checked precisely 2 s after the reported `reset` time once `remaining` reaches 0. Returning to the tab also triggers a re-check, throttled to 30 s.
+- Every measurement response updates the meter in place from the `X-RateLimit-*` headers, so no additional requests are required.
+- **Clicking the meter** forces the proxy path. When the local quota resets (`remaining` changes from 0 to a positive value), the preference is cleared automatically and a notification reports that the local quota is available again.
 
 ## How requests flow
 
@@ -65,9 +65,9 @@ Browser ── local quota left ────────► {GP_API_URL}/v1/meas
            (also used when >50 probes are requested, or when the direct API is unreachable)
 ```
 
-- `GET /api/config` returns `{ apiUrl, proxyAvailable, maxProbes: { direct, proxy } }` so the browser knows where to call directly and how many probes it may request per mode.
-- `GET /api/limits`, `POST /api/measurements`, `GET /api/measurements/:id` proxy the upstream response transparently (same status code & JSON body) and pass through the rate-limit headers. `GP_TOKEN` is never sent to the browser.
-- `GET /api/probes` is the only endpoint that talks to the upstream *without* the token: it fetches `GET /v1/probes` once, folds the 5000+ entries into a de-duplicated index (countries / regions / cities / networks / tags, 92 KB JSON, `Cache-Control: public, max-age=300` plus an in-process 5-minute cache), and serves it to the browser for autocomplete. It spends no Globalping quota. If the upstream is unreachable a stale copy is served; if there is none, the endpoint answers `502` and the front end silently disables suggestions.
+- `GET /api/config` returns `{ apiUrl, proxyAvailable, maxProbes: { direct, proxy } }`, allowing the browser to determine where to call directly and how many probes it may request in each mode.
+- `GET /api/limits`, `POST /api/measurements` and `GET /api/measurements/:id` proxy the upstream response transparently (same status code and JSON body) and pass through the rate-limit headers. `GP_TOKEN` is never sent to the browser.
+- `GET /api/probes` is the only endpoint that talks to the upstream *without* the token: it fetches `GET /v1/probes` once and condenses the 5000+ entries into a de-duplicated index (countries / regions / cities / networks / tags, 92 KB JSON, `Cache-Control: public, max-age=300` plus an in-process 5-minute cache), which it serves to the browser for autocomplete. It does not consume Globalping quota. If the upstream is unreachable, a stale copy is served; if no copy exists, the endpoint answers `502` and the front end disables autocomplete without showing an error.
 - Polling is throttled as required by the upstream: 500 ms after the previous response arrives, at most 2 requests/second per measurement.
 
 ## Environment variables
@@ -110,11 +110,11 @@ SESSION_SECRET='…' \
 node dist/index.js
 ```
 
-Visit http://localhost:80 (or `SERVER_PORT`) once started. No configuration is required to run measurements — the browser talks to the public Globalping API directly; `GP_TOKEN` only adds the signed-in fallback path.
+Open http://localhost:80 (or `SERVER_PORT`) once the service has started. No configuration is required to run measurements: the browser calls the public Globalping API directly, and `GP_TOKEN` enables only the signed-in fallback path.
 
 ## Testing
 
-Jest (ESM + ts-jest) covers the backend framework glue, the Globalping proxy controller, the OIDC service and every frontend module, plus end-to-end runs against a real `node:http` server.
+Jest (ESM + ts-jest) covers the backend framework utilities, the Globalping proxy controller, the OIDC service and every frontend module, plus end-to-end runs against a real `node:http` server.
 
 ```bash
 pnpm test            # run the whole suite once (33 suites / 839 cases)
@@ -124,7 +124,7 @@ pnpm lint            # ESLint (includes the test files)
 pnpm typecheck       # tsc --noEmit
 ```
 
-Layout: `test/backend` (framework utils, router, venation, config, logger), `test/service` (OIDC), `test/frontend` (jsdom SPA modules), `test/integration` (controllers + real HTTP server), `test/helpers` and `test/setup` (shared fixtures and baseline env). Coverage thresholds are not enforced, but the suite currently sits at ~98.9% lines and ~98.7% statements.
+Layout: `test/backend` (framework utils, router, venation, config, logger), `test/service` (OIDC), `test/frontend` (jsdom SPA modules), `test/integration` (controllers + real HTTP server), `test/helpers` and `test/setup` (shared fixtures and baseline env). No coverage thresholds are enforced; the suite currently reaches ~98.9% line and ~98.7% statement coverage.
 
 ## OIDC: Keycloak example
 
@@ -133,7 +133,7 @@ Layout: `test/backend` (framework utils, router, venation, config, logger), `tes
    - **Standard flow**: enabled (Authorization Code + PKCE S256)
    - **Valid redirect URIs**: `https://your.domain/api/auth/callback`
 2. Export/set env vars: `OIDC_ISSUER` (realm URL), `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`, and a `SESSION_SECRET`.
-3. Restart the service; the top-right area shows *Sign in* → Keycloak login → the user name (`preferred_username`) plus *Sign out*, and the second quota meter appears at the bottom-left.
+3. Restart the service. The top-right corner then offers *Sign in*, leading to the Keycloak login; afterwards it shows the user name (`preferred_username`) and *Sign out*, and the second quota meter appears at the bottom-left.
 
 For other IdPs (Authentik, Google, GitLab OIDC, …) adjust `OIDC_ISSUER` and, if needed, `OIDC_USERNAME_CLAIM`.
 
@@ -150,7 +150,7 @@ For other IdPs (Authentik, Google, GitLab OIDC, …) adjust `OIDC_ISSUER` and, i
 | `GET` | `/api/probes` | de-duplicated probe index for location autocomplete (public, no token, no quota) |
 | `POST` | `/api/measurements` | proxied `POST /v1/measurements` (login + `GP_TOKEN` required) |
 | `GET` | `/api/measurements/:id` | proxied `GET /v1/measurements/{id}` (login + `GP_TOKEN` required) |
-| any other GET | `/` or static files | front-end page & assets |
+| any other GET | `/` or static files | front-end pages and assets |
 
 ## Add a language
 
@@ -159,7 +159,7 @@ For other IdPs (Authentik, Google, GitLab OIDC, …) adjust `OIDC_ISSUER` and, i
 
 ## PWA notes
 
-The service worker keeps a versioned app-shell cache and prefers the network (`no-cache` for html/js/css) with cache fallback — bump `CACHE_VERSION` in `public/sw.js` when the shell changes. PWA requires HTTPS (or `localhost`).
+The service worker maintains a versioned app-shell cache and prefers the network (`no-cache` for html/js/css) with a cache fallback. Increment `CACHE_VERSION` in `public/sw.js` whenever the app shell changes. PWA requires HTTPS or `localhost`.
 
 ## Docker
 
@@ -173,12 +173,11 @@ docker run -p 3001:3001 \
 
 The image runs `pnpm install --prod` and copies `dist/` (backend + `public/`).
 
-## Scope & boundaries
+## Limitations
 
-- Only OIDC sign-in (no local accounts), no per-user Globalping token input, no server-side quota accounting.
-- No map, by design (map-approval number requirement in Mainland China).
-- No measurement history / sharing / dashboard links — results live only in the current page.
-- Sessions are stateless (restart invalidates them).
-- The proxy never stores the upstream response body; only the session user and upstream errors are logged.
+- Sign-in is OIDC-only: there are no local accounts, and visitors cannot supply their own Globalping token.
+- Measurements are not persisted; results exist only in the current page, without history, sharing links or dashboards.
+- Sessions are stateless, so restarting the service invalidates them.
+- The proxy does not store upstream response bodies; only the session user and upstream errors are logged.
 
-See [PLAN.md](./PLAN.md) for the full design notes.
+See [PLAN.md](./PLAN.md) for the complete design notes.
