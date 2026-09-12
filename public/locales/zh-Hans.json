@@ -141,7 +141,7 @@
 	"httpBodyTruncated": "正文已被 API 截断，此处仅显示前面部分。",
 
 	"quotaLocalLabel": "本机额度",
-	"quotaProxyLabel": "公共账号额度",
+	"quotaProxyLabel": "共享账号额度",
 	"quotaLoading": "载入中…",
 	"quotaUnavailable": "不可用",
 	"quotaResetIn": "{time} 后重置",

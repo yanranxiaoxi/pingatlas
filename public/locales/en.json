@@ -151,7 +151,7 @@
 	"quotaStandby": "click to use",
 	"quotaExhausted": "exhausted",
 	"quotaLoginRequired": "sign in required",
-	"quotaModeDirect": "direct to globalping.io",
+	"quotaModeDirect": "direct",
 	"quotaModeProxy": "via the server proxy",
 	"quotaUnreachable": "API unreachable",
 	"quotaResetBackToLocal": "Your own quota has reset — switched back to it.",
