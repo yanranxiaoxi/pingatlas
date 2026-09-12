@@ -111,6 +111,43 @@ describe('端到端 HTTP 服务（未配置服务端令牌）', () => {
 		}
 	});
 
+	/**
+	 * 回归护栏：前端代理路径与后端路由必须一致。
+	 *
+	 * `proxyFetch` 的调用方传的是上游路径（`/v1/...`），若忘了去掉 `/v1` 版本段，
+	 * 浏览器就会请求不存在的 `/api/v1/*` 并拿到 404——表现为左下角公共账号额度
+	 * 「不可用」、且每次测量都报「未找到该测量记录」。这里用真实的 proxyFetch
+	 * 生成路径，再打到真实服务器上，确保两侧不会再次各自漂移。
+	 */
+	it('前端 proxyFetch 生成的代理路径都能命中后端路由（不出现 404）', async () => {
+		const realFetch = globalThis.fetch;
+		const produced: Array<{ path: string; method: string }> = [];
+		globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			produced.push({ path: String(input), method: init?.method ?? 'GET' });
+			return new Response('{}', { status: 200 });
+		}) as typeof fetch;
+		try {
+			const { proxyFetch } = await import('../../src/frontend/api');
+			await proxyFetch('/v1/limits');
+			await proxyFetch('/v1/measurements', { method: 'POST' });
+			await proxyFetch('/v1/measurements/mid-1');
+		}
+		finally {
+			globalThis.fetch = realFetch;
+		}
+
+		expect(produced).toEqual([
+			{ path: '/api/limits', method: 'GET' },
+			{ path: '/api/measurements', method: 'POST' },
+			{ path: '/api/measurements/mid-1', method: 'GET' },
+		]);
+		for (const { path, method } of produced) {
+			const res = await realFetch(`${server.baseUrl}${path}`, { method, headers: { cookie: sessionCookie } });
+			// 未配置令牌时为 503，路由不存在时才是 404
+			expect(res.status).not.toBe(404);
+		}
+	});
+
 	it('GET /api/probes 无需登录，上游不可达时返回 502 而非 503', async () => {
 		const res = await fetch(`${server.baseUrl}/api/probes`);
 

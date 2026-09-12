@@ -78,9 +78,16 @@ export function directFetch(path: string, init?: RequestInit): Promise<Response>
 	return fetch(`${getConfig().apiUrl}${path}`, init);
 }
 
-/** 代理请求（浏览器 → 本服务后端 → globalping.io，套用服务端代币） */
+/**
+ * 代理请求（浏览器 → 本服务后端 → globalping.io，套用服务端代币）
+ *
+ * 调用方传上游路径（`/v1/...`），与 {@link directFetch} 保持同一套写法；
+ * 但本服务的代理路由直接挂在 `/api` 下、不带版本段（见 PLAN「Backend API」），
+ * 因此必须去掉 `/v1` 前缀：`/v1/measurements` → `/api/measurements`。
+ * 少了这一步就会请求到不存在的 `/api/v1/*` 并得到 404。
+ */
 export function proxyFetch(path: string, init?: RequestInit): Promise<Response> {
-	return fetch(`/api${path}`, init);
+	return fetch(`/api${path.replace(/^\/v1(?=\/|$)/, '')}`, init);
 }
 
 /** 拉取登录态；401 时自动重新读取一次（会话可能已在别处刷新） */

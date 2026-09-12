@@ -758,8 +758,8 @@ describe('模式与降级', () => {
 		field('target').value = 'example.com';
 		setQueue(jsonResponse({ id: 'mid-1' }, 202), measurement('finished'));
 		await submitForm();
-		expect(calls[0].url).toBe('/api/v1/measurements');
-		expect(calls[1].url).toBe('/api/v1/measurements/mid-1');
+		expect(calls[0].url).toBe('/api/measurements');
+		expect(calls[1].url).toBe('/api/measurements/mid-1');
 		expect(renderResultsRunningMock).toHaveBeenCalledWith(resultsRoot, expect.anything(), true);
 		expect(applyQuotaHeadersMock).toHaveBeenCalledWith(expect.any(Headers), 'user');
 	});
@@ -771,7 +771,7 @@ describe('模式与降级', () => {
 		setQueue(new TypeError('failed to fetch'), jsonResponse({ id: 'mid-1' }, 202), measurement('finished'));
 		await submitForm();
 		expect(toastMock).toHaveBeenCalledWith('t:fallbackToProxy', 'info');
-		expect(calls[1].url).toBe('/api/v1/measurements');
+		expect(calls[1].url).toBe('/api/measurements');
 		expect(renderMeasurementMock).toHaveBeenCalled();
 	});
 
@@ -794,7 +794,7 @@ describe('模式与降级', () => {
 		);
 		await submitForm();
 		expect(toastMock).toHaveBeenCalledWith('t:fallbackToProxy', 'info');
-		expect(calls[1].url).toBe('/api/v1/measurements');
+		expect(calls[1].url).toBe('/api/measurements');
 		expect(renderMeasurementMock).toHaveBeenCalled();
 	});
 

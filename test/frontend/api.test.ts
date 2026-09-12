@@ -114,11 +114,23 @@ describe('directFetch / proxyFetch', () => {
 		]);
 	});
 
-	it('proxyFetch 走同源 /api 前缀', async () => {
+	it('proxyFetch 把上游路径映射到同源 /api 代理路由（去掉 /v1 版本段）', async () => {
 		const fetchMock = fetchWithConfig(() => jsonResponse({}));
 		const api = await freshApi();
 		await api.proxyFetch('/v1/limits');
-		expect(fetchMock.mock.calls.at(-1)).toEqual(['/api/v1/limits', undefined]);
+		expect(fetchMock.mock.calls.at(-1)).toEqual(['/api/limits', undefined]);
+	});
+
+	it('proxyFetch 只去掉前导的 /v1，其余路径原样保留', async () => {
+		const fetchMock = fetchWithConfig(() => jsonResponse({}));
+		const api = await freshApi();
+		await api.proxyFetch('/v1/measurements/mid-1');
+		expect(fetchMock.mock.calls.at(-1)?.[0]).toBe('/api/measurements/mid-1');
+		// 路径中段的 v1 不是版本段，不能被替换
+		await api.proxyFetch('/v1/measurements/v1-abc');
+		expect(fetchMock.mock.calls.at(-1)?.[0]).toBe('/api/measurements/v1-abc');
+		await api.proxyFetch('/v1');
+		expect(fetchMock.mock.calls.at(-1)?.[0]).toBe('/api');
 	});
 
 	it('配置加载后 directFetch 使用后端下发的 apiUrl', async () => {
