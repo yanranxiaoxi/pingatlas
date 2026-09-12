@@ -158,7 +158,9 @@ describe('resolveMode 优先级', () => {
 
 	it('偏好代理但代理不可用时忽略偏好', async () => {
 		localStorage.setItem('pa-quota-preference', 'proxy');
-		const quota = await init(configFixture({ proxyAvailable: false }));
+		const quota = await freshQuota();
+		// 不等待首次拉取：此刻偏好仍是持久化的 proxy，但代理不可用
+		quota.initQuota(configFixture({ proxyAvailable: false }));
 		expect(quota.getQuotaState().preference).toBe('proxy');
 		expect(quota.resolveMode()).toBe('direct');
 	});
@@ -619,11 +621,38 @@ describe('initQuota / 心跳 / 登录态同步', () => {
 		expect(proxyImplCalls).toBe(proxyBefore + 1);
 	});
 
-	it('恢复偏好为 proxy', async () => {
+	it('恢复偏好为 proxy（本机额度已耗尽时保留）', async () => {
+		loggedIn = true;
+		localStorage.setItem('pa-quota-preference', 'proxy');
+		localImpl = async () => limitsResponse({ limit: 60, remaining: 0, reset: 30 });
+		const quota = await init();
+		expect(quota.getQuotaState().preference).toBe('proxy');
+		expect(localStorage.getItem('pa-quota-preference')).toBe('proxy');
+	});
+
+	it('本机额度仍有结余时刷新后切回本机额度', async () => {
 		loggedIn = true;
 		localStorage.setItem('pa-quota-preference', 'proxy');
 		const quota = await init();
+		expect(quota.getQuotaState().preference).toBe('auto');
+		expect(localStorage.getItem('pa-quota-preference')).toBe('auto');
+		expect(quota.resolveMode()).toBe('direct');
+		// 刷新时的常规行为，不应弹提示
+		expect(toastMock).not.toHaveBeenCalled();
+	});
+
+	it('刷新后手动改回 proxy 不再被本机额度覆盖', async () => {
+		loggedIn = true;
+		localStorage.setItem('pa-quota-preference', 'proxy');
+		const quota = await init();
+		expect(quota.getQuotaState().preference).toBe('auto');
+
+		quota.setPreference('proxy');
 		expect(quota.getQuotaState().preference).toBe('proxy');
+		// 心跳再次拿到「本机额度有结余」也不应覆盖用户的选择
+		quota.applyQuotaHeaders(rateHeaders(60, 30), 'ip');
+		expect(quota.getQuotaState().preference).toBe('proxy');
+		expect(quota.resolveMode()).toBe('proxy');
 	});
 
 	it('错误的存储值被忽略', async () => {

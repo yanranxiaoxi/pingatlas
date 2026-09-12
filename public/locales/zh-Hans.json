@@ -151,7 +151,7 @@
 	"quotaStandby": "点击使用",
 	"quotaExhausted": "已用尽",
 	"quotaLoginRequired": "需要登录",
-	"quotaModeDirect": "直连 globalping.io",
+	"quotaModeDirect": "直连",
 	"quotaModeProxy": "经服务端代理",
 	"quotaUnreachable": "接口不可达",
 	"quotaResetBackToLocal": "本机额度已重置，已自动切回本机额度。",

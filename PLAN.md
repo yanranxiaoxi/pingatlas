@@ -135,6 +135,11 @@ Reset detection relies on `remaining` going from 0 to a positive value (not on t
 resets `modePreference` to `'auto'` with a toast. The meter is a `<button>`, so the visitor can
 force the proxy path at any time; the automatic switch-back overrides that preference.
 
+A persisted `'proxy'` preference is only carried over when the local quota is exhausted: after a
+page load the first local-quota result decides — with quota left the preference returns to `'auto'`
+(silently, since this happens on every refresh), and only an exhausted quota keeps `'proxy'`. An
+explicit `setPreference()` call during the session outranks that load-time default.
+
 Probe-count limits: `ANONYMOUS_MAX_PROBES = 50`, `AUTHENTICATED_MAX_PROBES = 500`,
 `UI_DEFAULT_PROBES = 3`; the preset list is `1, 3, 5, 10, 25, 50, 100, 500`.
 

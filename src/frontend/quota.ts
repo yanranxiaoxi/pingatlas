@@ -62,6 +62,15 @@ let localInFlight: Promise<void> | null = null;
 let proxyInFlight: Promise<void> | null = null;
 let lastLocalFetch = 0;
 
+/**
+ * 页面加载时从 `localStorage` 恢复的 `proxy` 偏好是否仍在等待裁定。
+ *
+ * 是否保留这份偏好要等首次拿到本地额度结果才能决定：本机额度还有结余就默认
+ * 切回本机额度（见 {@link commit}），已耗尽才保留。用户手动改过偏好后该标记
+ * 立即作废——显式操作优先于加载时的默认值。
+ */
+let restoredProxyPreference = false;
+
 const listeners = new Set<(state: QuotaState) => void>();
 
 function storageGet(key: string): string | null {
@@ -243,6 +252,17 @@ function commit(actor: QuotaActor, next: QuotaSnapshot): void {
 	if (actor === 'ip') {
 		const previous = state.local;
 		state.local = next;
+		// 加载时恢复的 proxy 偏好只由加载后的首份本地额度裁定
+		if (restoredProxyPreference) {
+			restoredProxyPreference = false;
+			if (next.remaining > 0) {
+				// 刷新后本机额度仍有结余：默认切回本机额度。这里是每次刷新都可能
+				// 发生的常规行为，不弹提示，避免每次开页面都被打扰
+				state.preference = 'auto';
+				persistPreference('auto');
+			}
+			// 本机额度已耗尽则保留 proxy 偏好，后续回切交给 handleLocalReset
+		}
 		if (previous.status === 'ready' && previous.remaining <= 0 && next.remaining > 0) {
 			handleLocalReset();
 		}
@@ -380,6 +400,8 @@ export function setDesiredProbes(count: number): void {
  * 切换额度偏好。仅在本地额度确有结余或代理可用时才允许，否则提示并保持原状。
  */
 export function setPreference(preference: QuotaPreference): void {
+	// 用户显式操作优先于「加载时恢复的偏好」，此后不再由本机额度裁定
+	restoredProxyPreference = false;
 	if (preference === state.preference) {
 		return;
 	}
@@ -415,6 +437,8 @@ export function initQuota(appConfig: AppConfig): void {
 	const stored = storageGet(PREFERENCE_KEY);
 	if (stored === 'proxy') {
 		state.preference = 'proxy';
+		// 先按持久化值生效，等首份本地额度结果决定是否切回本机额度
+		restoredProxyPreference = true;
 	}
 	document.addEventListener('visibilitychange', () => {
 		if (document.visibilityState === 'visible' && Date.now() - lastLocalFetch > RESUME_STALE_MS) {
@@ -446,5 +470,6 @@ export function stopQuota(): void {
 		heartbeatTimer = undefined;
 	}
 	clearResetTimer();
+	restoredProxyPreference = false;
 	initialized = false;
 }
