@@ -9,7 +9,7 @@ import { projectRoot, publicDir } from '../helpers/paths';
 
 const EXPECTED_LINKS: Array<{ label: string; href: string }> = [
 	{ label: '小汐', href: 'https://soraharu.com/' },
-	{ label: 'User Leader', href: 'https://globalping.io/leaderboard' },
+	{ label: 'Leader User', href: 'https://globalping.io/leaderboard' },
 	{ label: '探针节点', href: 'https://globalping.io/users/yanranxiaoxi' },
 ];
 
@@ -35,7 +35,7 @@ describe('页脚署名', () => {
 
 	it('中文文案与约定字面一致', () => {
 		expect(zh.footerCredit).toBe(
-			'[小汐](https://soraharu.com/)为 Globalping 的 [User Leader](https://globalping.io/leaderboard)，持续为项目贡献[探针节点](https://globalping.io/users/yanranxiaoxi)。',
+			'[小汐](https://soraharu.com/) 为 Globalping 的 [Leader User](https://globalping.io/leaderboard)，持续为项目贡献 [探针节点](https://globalping.io/users/yanranxiaoxi)。',
 		);
 	});
 
@@ -59,7 +59,7 @@ describe('页脚署名', () => {
 		const text = textWithLinks(zh.footerCredit)
 			.filter((node): node is string => typeof node === 'string')
 			.join('');
-		expect(text).toBe('为 Globalping 的 ，持续为项目贡献。');
+		expect(text).toBe(' 为 Globalping 的 ，持续为项目贡献 。');
 		expect(text).not.toContain('](');
 	});
 

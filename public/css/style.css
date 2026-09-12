@@ -186,16 +186,74 @@ pre,
 .user-area {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 10px;
+	min-height: 34px;
 }
 
 .user-chip {
-	font-size: 0.85rem;
-	color: var(--text-dim);
-	max-width: 14ch;
+	font-weight: 600;
+	font-size: 0.9rem;
+	color: var(--text);
+	background: var(--accent-soft);
+	border-radius: 999px;
+	padding: 4px 12px;
+	max-width: 180px;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+/*
+ * 顶部栏操作区控件（语言切换 / 主题切换 / 登录登出按钮）的专用视觉规范。
+ * 只覆盖 .topbar-actions 内的实例，表单区与结果区的 .btn / .select 不受影响；
+ * 同时不覆盖 min-height，窄屏与触屏下的触控目标仍按媒体查询放大。
+ */
+.topbar-actions .select {
+	min-width: 110px;
+	padding: 6px 10px;
+	/* 右侧留出箭头宽度 + 间距，避免文字与箭头重叠 */
+	padding-right: 30px;
+	font-size: 1rem;
+	background-position: right 10px center;
+	background-size: 14px 14px;
+}
+
+.topbar-actions .icon-btn {
+	background: transparent;
+}
+
+.topbar-actions .icon-btn:hover {
+	background: var(--accent-soft);
+	border-color: var(--border);
+}
+
+.topbar-actions .btn {
+	padding: 7px 14px;
+	font-size: 0.9rem;
+	border-color: transparent;
+	white-space: nowrap;
+	transition: filter 0.15s ease, background 0.15s ease;
+}
+
+.topbar-actions .btn:hover {
+	border-color: transparent;
+	filter: brightness(1.06);
+}
+
+.topbar-actions .btn.ghost {
+	background: transparent;
+	border-color: var(--border);
+}
+
+/* 描边按钮悬停只增亮，不填充底色 */
+.topbar-actions .btn.ghost:hover {
+	background: transparent;
+}
+
+.topbar-actions .btn.primary {
+	background: var(--accent);
+	border-color: transparent;
+	color: var(--accent-text);
 }
 
 /* ===== 通用控件 ===== */
@@ -1221,50 +1279,95 @@ textarea.input:focus {
 }
 
 /* ===== 弹窗 / 提示 ===== */
+/*
+ * 登录 / 登出弹窗：半透明遮罩 + 居中提示框。遮罩、尺寸、动效与按钮排版按
+ * 同一套规范统一，改动时请整体保持一致。
+ */
 .modal-overlay {
 	position: fixed;
 	inset: 0;
+	/* 保持低于 toast（80）/ 补全面板（90），避免弹窗打开时把提示与补全面板盖住 */
 	z-index: 60;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	padding: 16px;
-	background: rgba(10, 13, 18, 0.58);
-	backdrop-filter: blur(2px);
-	animation: pa-fade-in 0.15s ease;
+	background: rgba(16, 24, 40, 0.45);
+	animation: modal-fade-in 0.15s ease;
 }
 
 .modal-dialog {
-	width: 100%;
-	max-width: 380px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: min(92vw, 360px);
+	padding: 28px 24px;
 	background: var(--card);
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	box-shadow: var(--shadow);
-	padding: 18px;
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
+	animation: modal-pop-in 0.18s ease;
 }
 
 .modal-text {
-	margin: 0;
-	font-size: 0.85rem;
-	color: var(--text-dim);
-	line-height: 1.55;
+	margin: 0 0 4px;
+	text-align: center;
+	font-size: 0.95rem;
+	color: var(--text);
 }
 
 .modal-action {
 	width: 100%;
+	padding: 11px 18px;
+	font-size: 0.95rem;
+	white-space: normal;
+	text-align: center;
+}
+
+/* 弹窗内按钮：与顶部栏按钮同一套规范（透明描边 + 悬停增亮） */
+.modal-dialog .btn {
+	border-color: transparent;
+	transition: filter 0.15s ease, background 0.15s ease;
+}
+
+.modal-dialog .btn:hover {
+	border-color: transparent;
+	filter: brightness(1.06);
+}
+
+.modal-dialog .btn.ghost {
+	background: transparent;
+	border-color: var(--border);
+}
+
+.modal-dialog .btn.ghost:hover {
+	background: transparent;
+}
+
+.modal-dialog .btn.primary {
+	background: var(--accent);
+	border-color: transparent;
+	color: var(--accent-text);
 }
 
 body.modal-open {
 	overflow: hidden;
 }
 
-@keyframes pa-fade-in {
+@keyframes modal-fade-in {
 	from { opacity: 0; }
 	to { opacity: 1; }
+}
+
+@keyframes modal-pop-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
 }
 
 .toast-box {
@@ -1396,6 +1499,15 @@ body.modal-open {
 
 	.topbar-inner {
 		gap: 8px;
+	}
+
+	/*
+	 * 语言选择框 + 主题按钮 + 用户名 + 登录/登出按钮在窄屏会超出可用宽度：
+	 * 允许换行并右对齐。
+	 */
+	.topbar-actions {
+		flex-wrap: wrap;
+		justify-content: flex-end;
 	}
 
 	.user-chip {

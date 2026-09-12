@@ -1,6 +1,6 @@
 {
 	"langLabel": "语言",
-	"themeToggle": "切换深浅色主题",
+	"themeToggle": "切换颜色主题",
 	"themeToLight": "切换到浅色主题",
 	"themeToDark": "切换到深色主题",
 
@@ -178,11 +178,11 @@
 	"measurementBusy": "已有测量正在进行中。",
 	"login": "登录",
 	"loginFailed": "登录失败，请重试。",
-	"ssoLogin": "单点登录",
+	"ssoLogin": "使用 OpenID Connect 登录",
 	"logout": "退出登录",
-	"logoutConfirm": "仅退出本站登录，还是同时退出单点登录会话？",
-	"logoutLocal": "仅退出本站",
-	"logoutSso": "同时退出单点登录",
-	"footerCredit": "[小汐](https://soraharu.com/)为 Globalping 的 [User Leader](https://globalping.io/leaderboard)，持续为项目贡献[探针节点](https://globalping.io/users/yanranxiaoxi)。",
+	"logoutConfirm": "要如何退出登录？",
+	"logoutLocal": "仅退出当前服务",
+	"logoutSso": "同时退出 SSO 系统",
+	"footerCredit": "[小汐](https://soraharu.com/) 为 Globalping 的 [Leader User](https://globalping.io/leaderboard)，持续为项目贡献 [探针节点](https://globalping.io/users/yanranxiaoxi)。",
 	"footerNote": "测量数据由 Globalping（api.globalping.io）提供，PingAtlas 不存储任何探测数据、也不自行执行测量。"
 }

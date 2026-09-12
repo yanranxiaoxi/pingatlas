@@ -62,14 +62,6 @@ docker-build:
     IMAGE_TAG: latest
   dependencies:
     - npm-build
-  # 镜像推送依赖外部 registry，偶发大 blob 上传超时
-  # （net/http: timeout awaiting response headers），与代码无关，允许自动重试以吸收网络抖动
-  retry:
-    max: 2
-    when:
-      - script_failure
-      - runner_system_failure
-      - stuck_or_timeout_failure
   before_script:
     - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USER" --password-stdin docker.io
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY

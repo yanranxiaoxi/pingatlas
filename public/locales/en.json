@@ -1,6 +1,6 @@
 {
 	"langLabel": "Language",
-	"themeToggle": "Toggle color theme",
+	"themeToggle": "Toggle color scheme",
 	"themeToLight": "Switch to light theme",
 	"themeToDark": "Switch to dark theme",
 
@@ -177,12 +177,12 @@
 	"errorProxyUnavailable": "The shared account quota is not configured on this site and is unavailable.",
 	"measurementBusy": "A measurement is already running.",
 	"login": "Sign in",
-	"loginFailed": "Sign-in failed, please try again.",
-	"ssoLogin": "Single sign-on",
+	"loginFailed": "Sign in failed, please try again.",
+	"ssoLogin": "Sign in with OpenID Connect",
 	"logout": "Sign out",
-	"logoutConfirm": "Sign out of this site only, or also end your single sign-on session?",
-	"logoutLocal": "This site only",
+	"logoutConfirm": "How would you like to sign out?",
+	"logoutLocal": "Sign out of this service only",
 	"logoutSso": "Also sign out of SSO",
-	"footerCredit": "[XiaoXi](https://soraharu.com/) is a Globalping [User Leader](https://globalping.io/leaderboard) and keeps contributing [probe nodes](https://globalping.io/users/yanranxiaoxi) to the project.",
+	"footerCredit": "[XiaoXi](https://soraharu.com/) is a Globalping [Leader User](https://globalping.io/leaderboard) and keeps contributing [probe nodes](https://globalping.io/users/yanranxiaoxi) to the project.",
 	"footerNote": "Measurement data is provided by Globalping (api.globalping.io). PingAtlas stores no probe data and does not run measurements itself."
 }

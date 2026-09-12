@@ -175,6 +175,10 @@ silently disables suggestions.
 - i18n dictionaries at `public/locales/{en,zh-Hans}.json`, resolved at runtime, with `en` as the
   fallback; switching language reloads the page
 - Theme follows `prefers-color-scheme` and can be overridden; the choice is persisted
+- The top-right user area (language switcher, user chip, sign-in / sign-out buttons) and the
+  sign-in / sign-out modals follow one shared visual spec. Their rules live in the `.topbar-actions`
+  / `.modal-dialog` scoped blocks of `public/css/style.css`, which keeps the form and result areas
+  on this project's own `.btn` / `.select` styling. Keep the two areas in sync when either changes
 - Service worker caches the app shell network-first and skips `/api/` and cross-origin requests
 - `src/frontend/location-suggest.ts` turns each location input into an ARIA combobox. The probe index
   is loaded lazily on first focus, then cached in memory → `localStorage` (`pa-probe-index`, 24 h TTL,
@@ -211,7 +215,7 @@ silently disables suggestions.
   panel positioning/flipping and every keyboard interaction. jsdom has no global `Response`, so the
   suite injects a minimal stand-in, and `ui` is mocked with deterministic English country names
   because the real `countryName()` depends on the host locale
-- 33 suites / 839 cases, ~98.9% lines. Remaining uncovered branches are defensive guards that no
+- 33 suites / 840 cases, ~98.9% lines. Remaining uncovered branches are defensive guards that no
   code path can reach (e.g. `compact()`'s empty-object skip, `buildMeasurementOptions()`'s
   type-guarded `default`, `pollMeasurement()`'s second token check) or need real navigation
   (`window.location.href` assignments, which jsdom cannot perform)
