@@ -214,9 +214,22 @@ describe('Probes 列表', () => {
 		const first = pane('panel-probes').querySelector('tbody tr .probe-loc') as HTMLElement;
 		const second = pane('panel-probes').querySelectorAll('tbody tr')[1].querySelector('.probe-loc') as HTMLElement;
 
-		expect(first.getAttribute('title')).toBe('Helsinki, Finland · Northern Europe · EU');
-		expect(second.getAttribute('title')).toBe('Frankfurt, Germany · Western Europe · EU');
+		// 大洲只作为次区域缺失时的兜底：并列会输出 `Eastern Asia · AS`，
+		// 那个 AS 容易被误读成被截断的 ASN
+		expect(first.getAttribute('title')).toBe('Helsinki, Finland · Northern Europe');
+		expect(second.getAttribute('title')).toBe('Frankfurt, Germany · Western Europe');
 		expect(pane('panel-probes').querySelectorAll('.probe-region')).toHaveLength(0);
+	});
+
+	it('次区域缺失时悬浮提示退回大洲', async () => {
+		const noRegion: ProbeRecord[] = [probe('Nowhere', 'DE', 3320, 'Deutsche Telekom AG', [], 'EU', '')];
+		const { panel } = await boot(noRegion);
+		panel.setActiveTab('probes');
+		await flush();
+
+		const cell = pane('panel-probes').querySelector('tbody tr .probe-loc') as HTMLElement;
+
+		expect(cell.getAttribute('title')).toBe('Nowhere, Germany · EU');
 	});
 
 	it('数据不可用时给出说明而不是空白', async () => {

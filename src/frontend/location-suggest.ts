@@ -1,6 +1,6 @@
 import type { ProbeIndex, ProbeIndexKind, SuggestCandidate } from './types';
 import { t } from './i18n';
-import { countryName, el, flagEmoji } from './ui';
+import { countryName, el, flagEmoji, regionSearchNames } from './ui';
 
 /**
  * 位置筛选自动补全
@@ -182,8 +182,9 @@ export function buildCandidates(index: ProbeIndex, kind: ProbeIndexKind): Sugges
 				label: countryName(code) || code,
 				meta: code,
 				badge: flagEmoji(code),
-				// 展示用的是本地化国名，但占位符承诺过可以输入 `Poland` 这类英文名
-				keywords: englishCountryName(code),
+				// 展示用的是本地化国名，但占位符承诺过可以输入 `Poland` 这类英文名；
+				// 再加上展示层覆盖过的名称，保证改过的名字也搜得到
+				keywords: [englishCountryName(code), ...regionSearchNames(code)].filter(Boolean).join(' '),
 			}));
 		case 'region':
 			return index.regions.map(([name, count]) => base(kind, name, count));
@@ -191,7 +192,7 @@ export function buildCandidates(index: ProbeIndex, kind: ProbeIndexKind): Sugges
 			return index.cities.map(([city, country, count]) => base(kind, city, count, {
 				meta: [flagEmoji(country), countryName(country)].filter(Boolean).join(' '),
 				// 展示用的是本地化国名，但用户很可能直接输入 ISO 码或英文国名
-				keywords: [country, englishCountryName(country)].filter(Boolean).join(' '),
+				keywords: [country, englishCountryName(country), ...regionSearchNames(country)].filter(Boolean).join(' '),
 			}));
 		case 'network':
 			return index.networks.map(([name, asn, count]) => base(kind, name, count, { meta: `AS${asn}` }));

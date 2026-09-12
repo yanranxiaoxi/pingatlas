@@ -6,13 +6,22 @@ import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals
 
 // ui 模块的确定性替身：真实 countryName 依赖运行环境语言（本地为中文），
 // 会让断言随机器变化，这里锁定为固定英文名。
+// 同时镜像真实实现的「地区展示覆盖」：被覆盖的地区改名、换旗并带上额外搜索名。
 jest.unstable_mockModule('../../src/frontend/ui', () => {
 	const NAMES: Record<string, string> = { CN: 'China', DE: 'Germany', US: 'United States' };
+	const OVERRIDDEN: Record<string, { name: string; flag: string; searchNames: string[] }> = {
+		TW: { name: '中国台北', flag: '🇨🇳', searchNames: ['中国台北', 'Chinese Taipei'] },
+	};
 	return {
-		countryName: (code: string) => NAMES[code] ?? code,
-		flagEmoji: (code: string) => (/^[A-Z]{2}$/i.test(code)
-			? String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1F1A5 + c.charCodeAt(0)))
-			: ''),
+		countryName: (code: string) => OVERRIDDEN[code as string]?.name ?? NAMES[code as string] ?? code,
+		flagEmoji: (code: string) => {
+			if (!/^[A-Z]{2}$/i.test(code)) {
+				return '';
+			}
+			return OVERRIDDEN[code.toUpperCase()]?.flag
+				?? String.fromCodePoint(...[...code.toUpperCase()].map(c => 0x1F1A5 + c.charCodeAt(0)));
+		},
+		regionSearchNames: (code: string) => OVERRIDDEN[code as string]?.searchNames ?? [],
 		el: (tag: string, attrs: Record<string, string> = {}, children: Array<HTMLElement | string> = []) => {
 			const node = document.createElement(tag);
 			for (const [key, value] of Object.entries(attrs)) {
@@ -113,6 +122,39 @@ describe('buildCandidates', () => {
 		expect(suggest.matchCandidates(countries, 'Germ').map(c => c.text)).toEqual(['DE']);
 		// 跳字子序列同样能命中英文名
 		expect(suggest.matchCandidates(countries, 'Grmny').map(c => c.text)).toEqual(['DE']);
+	});
+
+	it('被覆盖的地区按覆盖后的名称与旗帜展示', () => {
+		const [covered] = suggest.buildCandidates(makeIndex({ countries: [['TW', 4]] }), 'country');
+
+		expect(covered.text).toBe('TW');
+		expect(covered.label).toBe('中国台北');
+		expect(covered.badge).toBe('🇨🇳');
+	});
+
+	it('被覆盖的地区也能按覆盖后的名称搜索', () => {
+		const countries = suggest.buildCandidates(makeIndex({ countries: [['TW', 4]] }), 'country');
+
+		expect(countries[0].keywords).toContain('中国台北');
+		expect(countries[0].keywords).toContain('Chinese Taipei');
+		expect(suggest.matchCandidates(countries, '中国台北').map(c => c.text)).toEqual(['TW']);
+		expect(suggest.matchCandidates(countries, 'Chinese Taipei').map(c => c.text)).toEqual(['TW']);
+	});
+
+	it('城市候选里的被覆盖地区同样换名换旗', () => {
+		const cities = suggest.buildCandidates(makeIndex({ cities: [['Taipei', 'TW', 2]] }), 'city');
+
+		expect(cities[0].meta).toBe('🇨🇳 中国台北');
+	});
+
+	it('覆盖只改展示：先前可用的英文名仍作为搜索别名保留', () => {
+		const countries = suggest.buildCandidates(makeIndex({ countries: [['TW', 4]] }), 'country');
+		// 与 location-suggest 内部一致地取 Intl 英文名，避免把断言绑死在 ICU 数据上
+		const englishName = new Intl.DisplayNames(['en'], { type: 'region' }).of('TW') ?? '';
+
+		expect(englishName).not.toBe('');
+		expect(countries[0].keywords).toContain(englishName);
+		expect(suggest.matchCandidates(countries, englishName).map(c => c.text)).toEqual(['TW']);
 	});
 
 	it('地区候选直接回填地区名', () => {

@@ -133,10 +133,58 @@ export function formatBytes(size: number): string {
 	return `${(size / (1024 * 1024)).toFixed(2)} MiB`;
 }
 
+/**
+ * 展示信息需要覆盖的地区（ISO 3166-1 alpha-2）
+ *
+ * Globalping 的原始数据用 ISO 代码标记地区，而 `Intl.DisplayNames` 给出的名称、以及
+ * 由代码推导出的旗帜 emoji，都不一定符合本站的展示要求，因此在展示层统一覆盖。
+ *
+ * 覆盖同时作用于 `countryName()` / `flagEmoji()` 与自动补全的搜索关键词，所以结果
+ * 卡片、探针列表、位置筛选三处会一起生效，不需要各自判断。
+ */
+interface RegionOverride {
+	/** 各语言的展示名；未列出的语言回退到 `REGION_OVERRIDE_FALLBACK_LANG` */
+	names: Record<string, string>;
+	/** 旗帜 emoji */
+	flag: string;
+	/** 额外参与搜索的名称（不展示），让用户也能按这些写法搜到该地区 */
+	searchNames: string[];
+}
+
+/** `names` 未覆盖当前语言时的回退语言 */
+const REGION_OVERRIDE_FALLBACK_LANG = 'en';
+
+const REGION_OVERRIDES: Record<string, RegionOverride> = {
+	TW: {
+		names: {
+			'zh-Hans': '中国台北',
+			'en': 'Chinese Taipei',
+		},
+		flag: '🇨🇳',
+		searchNames: ['中国台北', 'Chinese Taipei'],
+	},
+};
+
+function regionOverride(country: string | null | undefined): RegionOverride | null {
+	if (!country) {
+		return null;
+	}
+	return REGION_OVERRIDES[country.toUpperCase()] ?? null;
+}
+
+/** 该地区需要额外参与搜索的名称；无覆盖时返回空数组 */
+export function regionSearchNames(country: string): string[] {
+	return regionOverride(country)?.searchNames ?? [];
+}
+
 /** 两位国家代码 → 国旗 emoji（非两位字母时返回空串） */
 export function flagEmoji(country: string | null | undefined): string {
 	if (!country || !/^[A-Z]{2}$/i.test(country)) {
 		return '';
+	}
+	const override = regionOverride(country);
+	if (override) {
+		return override.flag;
 	}
 	return String.fromCodePoint(...[...country.toUpperCase()].map(c => 0x1F1A5 + c.charCodeAt(0)));
 }
@@ -160,6 +208,10 @@ function regionNamesFor(lang: string): Intl.DisplayNames | null {
 export function countryName(country: string, lang: string = getLang()): string {
 	if (!country) {
 		return '';
+	}
+	const override = regionOverride(country);
+	if (override) {
+		return override.names[lang] ?? override.names[REGION_OVERRIDE_FALLBACK_LANG] ?? country;
 	}
 	try {
 		return regionNamesFor(lang)?.of(country.toUpperCase()) ?? country;

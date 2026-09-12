@@ -76,13 +76,14 @@ function locationLabel(probe: ProbeRecord): string {
  * 位置单元格的悬浮提示
  *
  * 次区域与大洲不单独占一列：列一多，网络名会被挤到词中间断行（如 `Contab o`）。
- * 完整位置改为悬浮查看。
+ * 完整位置改为悬浮查看，且大洲只作为次区域缺失时的兜底——两者并列会输出类似
+ * `Eastern Asia · AS` 的文本，那个 `AS` 是大洲代码，紧挨着区域名容易被误读成
+ * 被截断的 ASN。
  */
 function locationTitle(probe: ProbeRecord): string {
 	return [
 		locationLabel(probe),
-		probeRegion(probe),
-		probeContinent(probe),
+		probeRegion(probe) || probeContinent(probe),
 	].filter(Boolean).join(' · ');
 }
 

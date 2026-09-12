@@ -50,6 +50,8 @@ jest.unstable_mockModule('../../src/frontend/ui', () => ({
 	toast: toastMock,
 	countryName: (code: string) => code,
 	flagEmoji: () => '',
+	// location-suggest（经 measure 间接导入）会用到，未覆盖的地区无额外搜索名
+	regionSearchNames: () => [],
 	el: (tag: string, attrs: Record<string, unknown> = {}, children: unknown[] = []): HTMLElement => {
 		const node = document.createElement(tag);
 		for (const [key, value] of Object.entries(attrs)) {

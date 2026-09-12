@@ -13,6 +13,7 @@ import {
 	formatClock,
 	formatCountdown,
 	formatMs,
+	regionSearchNames,
 	textWithLinks,
 	toast,
 } from '../../src/frontend/ui';
@@ -264,6 +265,12 @@ describe('flagEmoji', () => {
 		expect(flagEmoji('CHN')).toBe('');
 		expect(flagEmoji('C1')).toBe('');
 	});
+
+	it('被覆盖的地区使用覆盖后的旗帜', () => {
+		expect(flagEmoji('TW')).toBe('🇨🇳');
+		// 大小写不敏感，且与真实实现一样先于代码推导
+		expect(flagEmoji('tw')).toBe('🇨🇳');
+	});
 });
 
 describe('countryName', () => {
@@ -289,6 +296,22 @@ describe('countryName', () => {
 		expect(countryName('JP', 'en')).toBe('Japan');
 	});
 
+	it('被覆盖的地区按语言返回覆盖后的名称', () => {
+		expect(countryName('TW', 'zh-Hans')).toBe('中国台北');
+		expect(countryName('TW', 'en')).toBe('Chinese Taipei');
+		// 大小写不敏感
+		expect(countryName('tw', 'zh-Hans')).toBe('中国台北');
+	});
+
+	it('被覆盖的地区在未列出的语言下回退到英文覆盖名', () => {
+		expect(countryName('TW', 'fr')).toBe('Chinese Taipei');
+	});
+
+	it('覆盖不依赖 Intl：即使 Intl 无法解析也用覆盖名', () => {
+		jest.spyOn(Intl.DisplayNames.prototype, 'of').mockReturnValue(undefined);
+		expect(countryName('TW', 'zh-Hans')).toBe('中国台北');
+	});
+
 	it('非法代码回退为原输入（Intl 抛错路径）', () => {
 		expect(countryName('ZZZ')).toBe('ZZZ');
 	});
@@ -310,6 +333,18 @@ describe('countryName', () => {
 		finally {
 			Intl.DisplayNames = original;
 		}
+	});
+});
+
+describe('regionSearchNames', () => {
+	it('被覆盖的地区返回其额外搜索名', () => {
+		expect(regionSearchNames('TW')).toEqual(['中国台北', 'Chinese Taipei']);
+		expect(regionSearchNames('tw')).toEqual(['中国台北', 'Chinese Taipei']);
+	});
+
+	it('未被覆盖的地区返回空数组', () => {
+		expect(regionSearchNames('JP')).toEqual([]);
+		expect(regionSearchNames('')).toEqual([]);
 	});
 });
 

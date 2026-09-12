@@ -187,6 +187,15 @@ autocomplete and the probe list only hits the upstream once. The browser keeps i
 - i18n dictionaries at `public/locales/{en,zh-Hans}.json`, resolved at runtime, with `en` as the
   fallback; switching language reloads the page
 - Theme follows `prefers-color-scheme` and can be overridden; the choice is persisted
+- Region names and flags go through one override layer in `src/frontend/ui.ts`
+  (`REGION_OVERRIDES`, keyed by ISO 3166-1 alpha-2). Globalping tags every probe with an ISO code,
+  and neither `Intl.DisplayNames` nor the flag emoji derived from the code necessarily matches the
+  naming this site must use, so the display layer overrides both. Because `countryName()` and
+  `flagEmoji()` are the only entry points, the result cards, the probe list and the location
+  autocomplete all pick the override up without any site-specific checks. `names` is per language
+  with a fallback (`REGION_OVERRIDE_FALLBACK_LANG`), and `searchNames` are extra, never-rendered
+  keywords so the autocomplete stays reachable by the overridden names. Keep the override list
+  authoritative: add a code here rather than special-casing a screen
 - The top-right user area (language switcher, user chip, sign-in / sign-out buttons) and the
   sign-in / sign-out modals follow one shared visual spec. Their rules live in the `.topbar-actions`
   / `.modal-dialog` scoped blocks of `public/css/style.css`, which keeps the form and result areas
