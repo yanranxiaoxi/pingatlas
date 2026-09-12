@@ -9,7 +9,7 @@
 /** 索引结构版本；结构变化时递增，用于让前端丢弃旧缓存 */
 export const PROBE_INDEX_VERSION = 1;
 
-/** 上游探针条目（只声明建立索引用到的字段） */
+/** 上游探针条目（只声明建立索引与列表用到的字段） */
 export interface RawProbe {
 	location?: {
 		continent?: string;
@@ -21,6 +21,26 @@ export interface RawProbe {
 	};
 	tags?: string[];
 }
+
+/**
+ * 精简探针记录：`[城市, 国家码, 大洲码, 次区域名, ASN, 网络名, 标签]`
+ *
+ * 用元组而不是对象：5062 条探针走对象嵌套约 800 KB，元组约 500 KB（gzip 后
+ * 约 70 KB），而前端只在「探针列表」标签页需要时才拉取。字段顺序与下方
+ * `buildProbeList` 一一对应，缺省值统一用空串 / 0，避免前端反复判空。
+ */
+export type ProbeRecord = [string, string, string, string, number, string, string[]];
+
+/** `ProbeRecord` 各下标，避免调用方写魔法数字 */
+export const PROBE_FIELD = {
+	city: 0,
+	country: 1,
+	continent: 2,
+	region: 3,
+	asn: 4,
+	network: 5,
+	tags: 6,
+} as const;
 
 /**
  * 去重后的探针位置索引
@@ -111,4 +131,31 @@ export function buildProbeIndex(probes: RawProbe[]): ProbeIndexData {
 		}),
 		tags: toPairs(tags),
 	};
+}
+
+/**
+ * 把原始探针列表压成精简记录数组，供「探针列表」标签页逐条展示与匹配
+ *
+ * 与索引不同，这里保留每一条探针，因此调用方要控制下发体积；
+ * 缺少位置的条目会被丢弃（无法参与位置筛选，展示也没有意义）。
+ */
+export function buildProbeList(probes: RawProbe[]): ProbeRecord[] {
+	const list = Array.isArray(probes) ? probes : [];
+	const records: ProbeRecord[] = [];
+	for (const probe of list) {
+		const location = probe?.location;
+		if (!location) {
+			continue;
+		}
+		records.push([
+			location.city ?? '',
+			location.country ?? '',
+			location.continent ?? '',
+			location.region ?? '',
+			typeof location.asn === 'number' ? location.asn : 0,
+			location.network ?? '',
+			Array.isArray(probe.tags) ? [...probe.tags] : [],
+		]);
+	}
+	return records;
 }

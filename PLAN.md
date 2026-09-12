@@ -157,6 +157,7 @@ error bodies and status codes can be passed through unchanged.
 | `GET` | `/api/auth/logout` | public | clear session, optional IdP end-session redirect |
 | `GET` | `/api/limits` | login + `GP_TOKEN` | proxied `GET /v1/limits` |
 | `GET` | `/api/probes` | public | de-duplicated probe index for location autocomplete (no token, no quota) |
+| `GET` | `/api/probe-list` | public | per-probe list for the "Probes list" tab, built from the same upstream fetch as `/api/probes` |
 | `POST` | `/api/measurements` | login + `GP_TOKEN` | proxied `POST /v1/measurements` |
 | `GET` | `/api/measurements/:id` | login + `GP_TOKEN` | proxied `GET /v1/measurements/{id}` |
 
@@ -170,6 +171,12 @@ A module-level cache serves it for 5 minutes (`PROBE_INDEX_TTL`) and the respons
 `Cache-Control: public, max-age=300` plus an `X-Probe-Index: hit|miss` marker. A stale copy is served
 when the upstream call fails; with no copy at all the endpoint answers `502` and the front end
 silently disables suggestions.
+
+The same upstream response also feeds `buildProbeList()`, which keeps **every** probe as a compact
+`[city, country, continent, region, asn, network, tags]` tuple (~500 KB, gzip ~70 KB) instead of
+aggregating it. `/api/probe-list` serves that array from the shared cache, so opening both the
+autocomplete and the probe list only hits the upstream once. The browser keeps it in memory only
+(never `localStorage`) and fetches it lazily — see the probe list tab below.
 
 ## Front-end structure
 
@@ -190,8 +197,9 @@ silently disables suggestions.
   background refresh after the TTL, discarded after 3 days) → the network. Scoring is
   exact > prefix > substring > subsequence (`Fuzho` → `Fuzhou`); whitespace splits the query into
   AND-ed tokens, probe count breaks ties, and personal `u-*` tags take a 500-point penalty. The panel
-  is appended to `document.body` with `position: fixed` (the form panel is a scroll container that
-  would clip it), re-positions on scroll/resize, and flips above the input when the space below is
+  is appended to `document.body` with `position: fixed` so it overlays the panels around it and can
+  be placed with viewport coordinates, re-positions on scroll/resize, and flips above the input when
+  the space below is
   under `MIN_PANEL_HEIGHT`. `mousedown` is cancelled on options so selection does not blur the input,
   and `Enter` is consumed while an option is highlighted so it never submits the form
 - Result tables live in `.table-wrap`; below 620px the header row is hidden visually (still exposed
@@ -199,6 +207,62 @@ silently disables suggestions.
   Hostnames wrap, numeric columns stay single-line, and the four MTR stat columns share one row —
   the page never scrolls horizontally. Touch targets are enlarged below 620px and on any coarse
   pointer device
+- The result panel is a three-tab view (`src/frontend/panel.ts` + `src/frontend/probe-list.ts`):
+  **Probes list** / **Matched probes** / **Results**. Only visibility and ARIA state change on
+  switch, so rendered content and scroll position survive. The default is *Results* — that keeps the
+  pre-tab behaviour and avoids pulling 500 KB on every page load. Tabs auto-switch on:
+  starting a measurement → *Results*; editing a structured location field → *Probes list*;
+  editing magic → *Matched probes* (the natural counterpart, since magic is what that list is
+  derived from)
+- The two probe lists differ only in filtering scope, which is what keeps the "+ then + again"
+  workflow usable:
+  - **Probes list** applies the *structured* filters only (continent / country / city / ASN /
+    network / tags) and ignores magic — otherwise every "+" would shrink the candidate set down to
+    the probe just picked. Columns are location / ASN / network / tags / action; region and
+    continent are folded into the location cell's `title` because an extra column squeezed network
+    names into mid-word breaks
+  - **Matched probes** applies the *full* filter — exactly what will be sent upstream, because it
+    goes through the same `readLocationFilters()` as `buildLocation()` (structured fields win over
+    magic when any is set). Each row's `×` removes the magic token that identifies that probe
+  - Both are capped at `PROBE_LIST_LIMIT = 160` rows (the upstream total can be 5000+) with a
+    "showing N of M" line both above and below the table — the top one scrolls out of view long
+    before the end of a 160-row list, so the bottom copy saves a scroll back up. The lower bound is
+    stated only when the list is actually truncated (`shown < total`, so exactly 160 hits reads as a
+    plain "160 matching probes"). The bottom copy is `aria-hidden` (repeating the same sentence in
+    one region is just noise for screen readers; the top copy already carries it) and is omitted
+    when nothing matched, where the top line and the empty table header are already on screen
+    together. `+`/`×` only touch the magic textarea and then re-render
+- The page has exactly **one** scrollbar. No in-page block sets `max-height` + `overflow-y`, so the
+  form panel, the probe lists and each result card all take their natural height and the document
+  scrolls as a whole. This is deliberate: stacked scrollbars (page + probe list inside it) make
+  scrolling unpredictable. Consequences worth keeping in mind:
+  - `.form-panel` is *not* sticky. Sticky is incompatible with "no internal scrolling" — a panel
+    taller than the viewport would be pinned at `top: 72px` with its lower half unreachable, which
+    is exactly what the old `max-height: calc(100dvh - 96px); overflow-y: auto` worked around
+  - `.raw-text` (the raw-output block) keeps `overflow-x: auto` for long lines but has no height
+    cap, so an opened raw output expands in place. Only `overflow-x` is declared, so a vertical
+    scrollbar appears only if the height were capped — it never is
+  - The autocomplete `.suggest-panel` is the one exception, and only because it is `position: fixed`
+    rather than in the document flow: without a cap its 5000 candidates would extend past the
+    viewport. It is an overlay, not part of the page layout
+  - `.panel-tabs` deliberately declares **no** `overflow`. Writing `overflow-x: auto` (to scroll the
+    tabs horizontally) would also set `overflow-y` to `auto` — per spec, a non-`visible` axis forces
+    the other axis to `auto` — and since `.panel-tab`'s `margin-bottom: -1px` (which lets the active
+    underline cover the container border) makes the content 1px taller than the box, that 1px
+    rendered as a stray vertical scrollbar. The three labels are short, so the bar uses
+    `flex-wrap: wrap` instead and never needs to scroll
+- Magic fragments are built as `City+Country+AS<asn>[+datacenter-network][+eyeball-network]`
+  (`probeFragment`), the shape Globalping's magic accepts and the one verified against the live API.
+  Matching (`probes.ts`) mirrors Globalping: comma separates **OR** conditions, `+` separates **AND**
+  fragments within a condition, bare or `AS`-prefixed digits compare the ASN exactly,
+  `eyeball(-network)` / `datacenter(-network)` test tags, and everything else is a case-insensitive
+  "field contains fragment" test over country / city / region / continent / network / tags.
+  The tags *array* filter is AND — verified empirically: asking for `datacenter-network` together
+  with `eyeball-network` returns `no_probes_found`
+- The magic field is a `<textarea rows="2">` with `resize: vertical`, so long fragment lists can be
+  dragged taller instead of scrolling horizontally in a one-line input. Newlines are not valid magic
+  separators, so `normalizeMagic()` folds them (and stray duplicate separators) into `, ` both when
+  reading the form and when writing it back
 
 ## Testing
 
@@ -220,7 +284,7 @@ silently disables suggestions.
   panel positioning/flipping and every keyboard interaction. jsdom has no global `Response`, so the
   suite injects a minimal stand-in, and `ui` is mocked with deterministic English country names
   because the real `countryName()` depends on the host locale
-- 33 suites / 840 cases, ~98.9% lines. Remaining uncovered branches are defensive guards that no
+- 37 suites / 951 cases, ~98.3% lines. Remaining uncovered branches are defensive guards that no
   code path can reach (e.g. `compact()`'s empty-object skip, `buildMeasurementOptions()`'s
   type-guarded `default`, `pollMeasurement()`'s second token check) or need real navigation
   (`window.location.href` assignments, which jsdom cannot perform)

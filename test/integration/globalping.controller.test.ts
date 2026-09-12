@@ -634,3 +634,78 @@ describe('GET /api/probes（位置筛选自动补全的数据源）', () => {
 		expect(JSON.parse(res.body).total).toBe(0);
 	});
 });
+
+describe('GET /api/probe-list（探针列表标签页的数据源）', () => {
+	const upstreamProbes = [
+		{ location: { city: 'Helsinki', country: 'FI', continent: 'EU', region: 'Northern Europe', asn: 24940, network: 'Hetzner Online' }, tags: ['datacenter-network'] },
+		{ location: { city: 'Frankfurt', country: 'DE', continent: 'EU', region: 'Western Europe', asn: 15169, network: 'Google LLC' }, tags: ['datacenter-network'] },
+		// 与索引不同：列表保留重复位置的每一条探针
+		{ location: { city: 'Frankfurt', country: 'DE', continent: 'EU', region: 'Western Europe', asn: 15169, network: 'Google LLC' }, tags: [] },
+	];
+
+	it('无需登录即可访问，并逐条返回精简记录', async () => {
+		const controller = await loadController({});
+		fetchMock.mockResolvedValueOnce(upstreamJson(upstreamProbes));
+		const { ctx, res } = createMockContext({ url: '/api/probe-list', user: null });
+
+		await controller.default.probeList(ctx);
+
+		expect(res.statusCode).toBe(200);
+		expect(JSON.parse(res.body)).toEqual([
+			['Helsinki', 'FI', 'EU', 'Northern Europe', 24940, 'Hetzner Online', ['datacenter-network']],
+			['Frankfurt', 'DE', 'EU', 'Western Europe', 15169, 'Google LLC', ['datacenter-network']],
+			['Frankfurt', 'DE', 'EU', 'Western Europe', 15169, 'Google LLC', []],
+		]);
+	});
+
+	it('与索引共用同一次上游拉取：两个接口只打上游一次', async () => {
+		const controller = await loadController({});
+		fetchMock.mockResolvedValue(upstreamJson(upstreamProbes));
+
+		await controller.default.probeList(createMockContext({ url: '/api/probe-list' }).ctx);
+		const index = createMockContext({ url: '/api/probes' });
+		await controller.default.probes(index.ctx);
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		// 索引仍按去重口径返回（3 条探针 → 2 个城市组合）
+		expect(JSON.parse(index.res.body).total).toBe(3);
+		expect(index.res.getHeader('x-probe-index')).toBe('hit');
+	});
+
+	it('列表接口同样命中缓存并声明浏览器缓存', async () => {
+		const controller = await loadController({});
+		fetchMock.mockResolvedValueOnce(upstreamJson(upstreamProbes));
+
+		await controller.default.probeList(createMockContext({ url: '/api/probe-list' }).ctx);
+		const second = createMockContext({ url: '/api/probe-list' });
+		await controller.default.probeList(second.ctx);
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(second.res.getHeader('x-probe-index')).toBe('hit');
+		expect(second.res.getHeader('cache-control')).toBe('public, max-age=300');
+	});
+
+	it('上游失败且无缓存时返回 502', async () => {
+		const controller = await loadController({});
+		fetchMock.mockRejectedValueOnce(new Error('offline'));
+		const { ctx, res } = createMockContext({ url: '/api/probe-list' });
+
+		await controller.default.probeList(ctx);
+
+		expect(res.statusCode).toBe(502);
+		expect(JSON.parse(res.body).error.type).toBe('upstream_error');
+	});
+
+	it('缺少 location 的条目被丢弃', async () => {
+		const controller = await loadController({});
+		fetchMock.mockResolvedValueOnce(upstreamJson([
+			{ location: { city: 'Berlin', country: 'DE', asn: 3320 } },
+			{ tags: ['x'] },
+		]));
+		const { ctx, res } = createMockContext({ url: '/api/probe-list' });
+
+		await controller.default.probeList(ctx);
+
+		expect(JSON.parse(res.body)).toEqual([['Berlin', 'DE', '', '', 3320, '', []]]);
+	});
+});

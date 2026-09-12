@@ -1,8 +1,8 @@
 import type { IContext } from '../utils/interface';
-import type { ProbeIndexData, RawProbe } from '../utils/probe-index';
+import type { ProbeIndexData, ProbeRecord, RawProbe } from '../utils/probe-index';
 import * as packageJson from '../../package.json';
 import { CONFIG } from '../config/config';
-import { buildProbeIndex } from '../utils/probe-index';
+import { buildProbeIndex, buildProbeList } from '../utils/probe-index';
 import { exceedsContentLength, readJsonBody } from '../utils/request';
 import { getSessionUser, sendJson } from '../utils/respond';
 import { Controller } from './controller';
@@ -43,9 +43,15 @@ const PASSTHROUGH_HEADERS = [
 const UPSTREAM_ERROR = { error: { type: 'upstream_error', message: 'Globalping API is unreachable' } };
 
 /** 探针索引进程内缓存（含过期时刻） */
-let probeIndexCache: { data: ProbeIndexData; expiresAt: number } | null = null;
+let probeIndexCache: { index: ProbeIndexData; list: ProbeRecord[]; expiresAt: number } | null = null;
 /** 正在进行的上游拉取，用于把并发请求合并成一次 */
-let probeIndexPending: Promise<ProbeIndexData | null> | null = null;
+let probeIndexPending: Promise<{ index: ProbeIndexData; list: ProbeRecord[] } | null> | null = null;
+
+/** 同一份上游数据同时产出「去重索引」与「精简探针列表」 */
+interface ProbeData {
+	index: ProbeIndexData;
+	list: ProbeRecord[];
+}
 
 /**
  * Globalping 代理控制器
@@ -83,19 +89,47 @@ class Globalping extends Controller {
 	 * 上游 `Cache-Control` 只有 1 秒，所以在服务端做 5 分钟缓存并直接送给浏览器。
 	 */
 	public async probes(ctx: IContext) {
-		const cached = probeIndexCache;
-		if (cached && cached.expiresAt > Date.now()) {
-			this.sendProbeIndex(ctx, cached.data, 'hit');
-			return;
-		}
-		const fresh = await this.loadProbeIndex(ctx);
-		// 上游抖动时退回稍旧的索引，比让前端丢掉自动补全更好
-		const data = fresh ?? cached?.data;
+		const data = await this.probeData(ctx);
 		if (!data) {
 			sendJson(ctx.res, 502, UPSTREAM_ERROR);
 			return;
 		}
-		this.sendProbeIndex(ctx, data, fresh ? 'miss' : 'stale');
+		this.sendProbeIndex(ctx, data.index, data.state);
+	}
+
+	/**
+	 * GET /api/probe-list：精简探针列表（「Probes 列表」标签页的数据源）
+	 *
+	 * 与索引共用同一次上游拉取和同一份缓存，因此同时打开两个标签页只会打上游一次。
+	 * 体积约 500 KB（gzip 后约 70 KB），前端只在真正需要时才拉取。
+	 */
+	public async probeList(ctx: IContext) {
+		const data = await this.probeData(ctx);
+		if (!data) {
+			sendJson(ctx.res, 502, UPSTREAM_ERROR);
+			return;
+		}
+		ctx.res.setHeader('Cache-Control', `public, max-age=${Math.floor(PROBE_INDEX_TTL / 1000)}`);
+		ctx.res.setHeader('X-Probe-Index', data.state);
+		sendJson(ctx.res, 200, data.list);
+	}
+
+	/**
+	 * 取探针数据（缓存命中 → 直出；否则拉取，失败时退回稍旧的缓存）
+	 * @returns 上游不可达且无可用缓存时返回 null
+	 */
+	private async probeData(ctx: IContext): Promise<{ index: ProbeIndexData; list: ProbeRecord[]; state: 'hit' | 'miss' | 'stale' } | null> {
+		const cached = probeIndexCache;
+		if (cached && cached.expiresAt > Date.now()) {
+			return { index: cached.index, list: cached.list, state: 'hit' };
+		}
+		const fresh = await this.loadProbeIndex(ctx);
+		// 上游抖动时退回稍旧的数据，比让前端同时丢掉自动补全和探针列表更好
+		const data = fresh ?? cached;
+		if (!data) {
+			return null;
+		}
+		return { index: data.index, list: data.list, state: fresh ? 'miss' : 'stale' };
 	}
 
 	/** 写出探针索引（浏览器/CDN 也可缓存 5 分钟） */
@@ -106,15 +140,15 @@ class Globalping extends Controller {
 	}
 
 	/**
-	 * 拉取并构建探针索引（进程内缓存 + 并发去重）
+	 * 拉取并构建探针数据（进程内缓存 + 并发去重）
 	 * @returns 上游不可达且无可用缓存时返回 null
 	 */
-	private async loadProbeIndex(ctx: IContext): Promise<ProbeIndexData | null> {
+	private async loadProbeIndex(ctx: IContext): Promise<ProbeData | null> {
 		if (!probeIndexPending) {
-			probeIndexPending = this.fetchProbeIndex(ctx)
+			probeIndexPending = this.fetchProbeData(ctx)
 				.then((data) => {
 					if (data) {
-						probeIndexCache = { data, expiresAt: Date.now() + PROBE_INDEX_TTL };
+						probeIndexCache = { ...data, expiresAt: Date.now() + PROBE_INDEX_TTL };
 					}
 					return data;
 				})
@@ -126,7 +160,7 @@ class Globalping extends Controller {
 	}
 
 	/** 单次真正访问上游；失败返回 null（由调用方决定是否退回旧缓存） */
-	private async fetchProbeIndex(ctx: IContext): Promise<ProbeIndexData | null> {
+	private async fetchProbeData(ctx: IContext): Promise<ProbeData | null> {
 		const url = `${CONFIG.gp.apiUrl.replace(/\/+$/, '')}/v1/probes`;
 		try {
 			const res = await fetch(url, {
@@ -141,7 +175,7 @@ class Globalping extends Controller {
 				return null;
 			}
 			const probes = (await res.json()) as RawProbe[];
-			return buildProbeIndex(probes);
+			return { index: buildProbeIndex(probes), list: buildProbeList(probes) };
 		}
 		catch (ex) {
 			ctx.logger.error('probe index upstream failed', ex);

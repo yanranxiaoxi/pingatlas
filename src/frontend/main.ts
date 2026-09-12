@@ -2,7 +2,9 @@ import type { QuotaSnapshot } from './types';
 import { getConfig, loadAuthStatus, loadConfig, onAuthChange } from './api';
 import { renderAuth } from './auth';
 import { applyI18n, getLang, initI18n, setLang, SUPPORTED_LANGS, t } from './i18n';
-import { initMeasureForm } from './measure';
+import { initMeasureForm, readLocationFilters, writeMagic } from './measure';
+import { initPanelTabs } from './panel';
+import { initProbeLists } from './probe-list';
 import {
 	getQuotaState,
 	getResetSeconds,
@@ -220,6 +222,19 @@ async function main(): Promise<void> {
 	const resultsRoot = document.getElementById('results');
 	if (resultsRoot) {
 		initMeasureForm(resultsRoot);
+	}
+
+	// 右侧结果面板的标签页，以及「Probes / 匹配 Probes」两个列表
+	initPanelTabs();
+	const probesRoot = document.getElementById('panel-probes');
+	const matchedRoot = document.getElementById('panel-matched');
+	if (probesRoot && matchedRoot) {
+		initProbeLists({
+			probesRoot,
+			matchedRoot,
+			readFilters: readLocationFilters,
+			writeMagic,
+		});
 	}
 
 	const userArea = document.getElementById('user-area');

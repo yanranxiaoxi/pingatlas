@@ -132,6 +132,45 @@ export interface SuggestCandidate {
 	score: number;
 }
 
+// ===================== 精简探针列表（「Probes 列表」数据源）=====================
+
+/**
+ * 精简探针记录：`[城市, 国家码, 大洲码, 次区域名, ASN, 网络名, 标签]`
+ *
+ * 与后端 `ProbeRecord` 一一对应；用元组是为了把 5062 条探针压到约 500 KB。
+ * 请通过 `probes.ts` 的读取函数取值，不要直接写下标。
+ */
+export type ProbeRecord = [string, string, string, string, number, string, string[]];
+
+/**
+ * 当前的位置筛选条件
+ *
+ * 与 `measure.ts` 的 `buildLocation()` 保持一致：只要任一结构化字段有值就只用
+ * 结构化筛选、忽略 magic；全部为空时才看 magic。否则预览会和实际请求对不上。
+ */
+export interface LocationFilters {
+	continent: string;
+	country: string;
+	city: string;
+	asn: number | null;
+	network: string;
+	tags: string[];
+	magic: string;
+}
+
+/** 一条命中的探针，以及把它带进结果的那个 magic 片段 */
+export interface MatchedProbe {
+	probe: ProbeRecord;
+	/**
+	 * 能把这条探针单独定位出来的 magic 片段（形如 `Helsinki+FI+AS24940`）；
+	 * 若它只是被 `Germany` 这类宽泛条件带进来的，则为 null（此时不提供单独移除）
+	 */
+	fragment: string | null;
+}
+
+/** 结果面板的三个标签页 */
+export type ResultTab = 'probes' | 'matched' | 'results';
+
 export interface PingOptions {
 	packets?: number;
 	protocol?: PingProtocol;

@@ -25,6 +25,8 @@ export default async (ven: Venation) => {
 
 			// 探针位置索引（位置筛选自动补全，公开数据、不消耗额度）
 			api.get('/probes', globalping.probes);
+			// 精简探针列表（「Probes 列表」标签页，与索引共用同一份上游缓存）
+			api.get('/probe-list', globalping.probeList);
 
 			// 服务端代币代理（本地额度用尽时的兜底通道）
 			api.get('/limits', globalping.limits);

@@ -1,4 +1,5 @@
 import type {
+	LocationFilters,
 	LocationOption,
 	MeasurementOptions,
 	MeasurementRequest,
@@ -8,6 +9,8 @@ import type {
 import { ApiError, directFetch, proxyFetch } from './api';
 import { t } from './i18n';
 import { closeAllSuggests, initLocationSuggests } from './location-suggest';
+import { setActiveTab } from './panel';
+import { normalizeMagic } from './probes';
 import { applyQuotaHeaders, getQuotaState, onQuotaChange, resolveMode, setDesiredProbes } from './quota';
 import { renderMeasurement, renderResultsError, renderResultsPlaceholder, renderResultsRunning } from './results';
 import { el, toast } from './ui';
@@ -181,22 +184,48 @@ function toOptions(fields: Record<string, unknown>): MeasurementOptions | undefi
 	return Object.keys(fields).length ? fields as unknown as MeasurementOptions : undefined;
 }
 
-function buildLocation(): LocationOption | undefined {
-	const magic = inputValue('loc-magic');
+/**
+ * 读取当前位置筛选条件
+ *
+ * 「Probes 列表」与「匹配 Probes 列表」也用它，保证列表预览与实际发出的请求
+ * 用的是同一份口径（尤其是结构化字段优先于 magic 这条规则）。
+ */
+export function readLocationFilters(): LocationFilters {
 	const tags = inputValue('loc-tags');
-	const structured = compact({
+	return {
 		continent: inputValue('loc-continent'),
 		country: inputValue('loc-country'),
 		city: inputValue('loc-city'),
-		asn: numberValue('loc-asn'),
+		asn: numberValue('loc-asn') ?? null,
 		network: inputValue('loc-network'),
-		tags: tags ? tags.split(/[\s,]+/).filter(Boolean) : undefined,
+		tags: tags ? tags.split(/[\s,]+/).filter(Boolean) : [],
+		magic: normalizeMagic(inputValue('loc-magic')),
+	};
+}
+
+/** 把 magic 写回表单（用于「+ / ×」按钮与归一化换行） */
+export function writeMagic(value: string): void {
+	const field = document.getElementById('loc-magic') as HTMLTextAreaElement | null;
+	if (field) {
+		field.value = value;
+	}
+}
+
+function buildLocation(): LocationOption | undefined {
+	const filters = readLocationFilters();
+	const structured = compact({
+		continent: filters.continent,
+		country: filters.country,
+		city: filters.city,
+		asn: filters.asn ?? undefined,
+		network: filters.network,
+		tags: filters.tags.length ? filters.tags : undefined,
 	});
 	// 结构化字段优先；都没有则退回 magic 自由文本
 	if (Object.keys(structured).length > 0) {
 		return structured as LocationOption;
 	}
-	return magic ? { magic } : undefined;
+	return filters.magic ? { magic: filters.magic } : undefined;
 }
 
 function buildMeasurementOptions(type: MeasurementType): MeasurementOptions | undefined {
@@ -426,6 +455,8 @@ async function runMeasurement(request: MeasurementRequest, resultsRoot: HTMLElem
 		toast(t('measurementBusy'), 'info');
 		return;
 	}
+	// 开始测试就切到「测试结果」，否则进度与结果会渲染在看不见的标签页里
+	setActiveTab('results');
 	const mode = resolveMode(request.limit ?? 1);
 	if (mode === 'unreachable') {
 		toast(t('noRouteAvailable'), 'error');

@@ -1,6 +1,6 @@
 import type { RawProbe } from '../../src/utils/probe-index';
 import { describe, expect, it } from '@jest/globals';
-import { buildProbeIndex, PROBE_INDEX_VERSION } from '../../src/utils/probe-index';
+import { buildProbeIndex, buildProbeList, PROBE_INDEX_VERSION } from '../../src/utils/probe-index';
 
 /** 造一条探针，只填建立索引需要的字段 */
 function probe(location: RawProbe['location'], tags: string[] = []): RawProbe {
@@ -111,5 +111,47 @@ describe('buildProbeIndex', () => {
 		const parsed = JSON.parse(JSON.stringify(index)) as typeof index;
 
 		expect(parsed).toEqual(index);
+	});
+});
+
+describe('buildProbeList', () => {
+	it('保留每一条探针，字段顺序为 [城市, 国家, 大洲, 次区域, ASN, 网络, 标签]', () => {
+		const list = buildProbeList([
+			probe({ city: 'Helsinki', country: 'FI', continent: 'EU', region: 'Northern Europe', asn: 24940, network: 'Hetzner Online' }, ['datacenter-network']),
+		]);
+
+		expect(list).toEqual([
+			['Helsinki', 'FI', 'EU', 'Northern Europe', 24940, 'Hetzner Online', ['datacenter-network']],
+		]);
+	});
+
+	it('不去重：重复位置的探针各占一条（列表要逐条展示）', () => {
+		const list = buildProbeList([
+			probe({ city: 'Fuzhou', country: 'CN', asn: 4134 }),
+			probe({ city: 'Fuzhou', country: 'CN', asn: 4134 }),
+		]);
+
+		expect(list).toHaveLength(2);
+	});
+
+	it('缺失字段补空串 / 0，且丢弃没有 location 的条目', () => {
+		const list = buildProbeList([
+			{ location: {} } as RawProbe,
+			{} as RawProbe,
+		]);
+
+		expect(list).toEqual([['', '', '', '', 0, '', []]]);
+	});
+
+	it('标签数组是拷贝，改列表不会影响原始数据', () => {
+		const source = [probe({ country: 'DE' }, ['datacenter-network'])];
+		const list = buildProbeList(source);
+		list[0][6].push('mutated');
+
+		expect(source[0].tags).toEqual(['datacenter-network']);
+	});
+
+	it('传入非数组时返回空列表', () => {
+		expect(buildProbeList(null as unknown as RawProbe[])).toEqual([]);
 	});
 });

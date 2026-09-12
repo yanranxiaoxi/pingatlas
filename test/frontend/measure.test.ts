@@ -130,7 +130,7 @@ const FORM_HTML = `
 		<select id="limit-presets"></select>
 		<span id="limit-hint"></span>
 		<input id="timeout">
-		<input id="loc-magic">
+		<textarea id="loc-magic"></textarea>
 		<input id="loc-tags">
 		<select id="loc-continent"><option value=""></option><option value="EU">EU</option></select>
 		<select id="loc-country"><option value=""></option><option value="DE">DE</option></select>
@@ -533,6 +533,31 @@ describe('位置构造', () => {
 		field('loc-magic').value = 'Germany';
 		await submitForm();
 		expect(lastBody().locations).toEqual([{ magic: 'Germany' }]);
+	});
+
+	it('magic 里的换行被归一成逗号后的条件列表', async () => {
+		await boot();
+		field('target').value = 'example.com';
+		// 多行 textarea：换行不是 magic 的分隔符，必须转成逗号
+		field('loc-magic').value = 'Helsinki+FI+AS24940\nFrankfurt+DE+AS15169';
+		await submitForm();
+		expect(lastBody().locations).toEqual([{ magic: 'Helsinki+FI+AS24940, Frankfurt+DE+AS15169' }]);
+	});
+
+	it('magic 里的多余分隔符与空白被清理', async () => {
+		await boot();
+		field('target').value = 'example.com';
+		field('loc-magic').value = '  Berlin+DE ,,  Frankfurt+DE  ';
+		await submitForm();
+		expect(lastBody().locations).toEqual([{ magic: 'Berlin+DE, Frankfurt+DE' }]);
+	});
+
+	it('只有空白字符的 magic 不发送 locations', async () => {
+		await boot();
+		field('target').value = 'example.com';
+		field('loc-magic').value = '   \n  ';
+		await submitForm();
+		expect(lastBody().locations).toBeUndefined();
 	});
 
 	it('结构化字段优先于 magic', async () => {
@@ -1087,5 +1112,84 @@ describe('位置筛选自动补全接线', () => {
 		await submitForm();
 
 		expect(lastBody().locations).toEqual([{ city: 'Fuzho' }]);
+	});
+});
+describe('readLocationFilters / writeMagic（供探针列表复用）', () => {
+	it('读出全部位置字段，ASN 缺省为 null', async () => {
+		await boot();
+
+		expect(measure.readLocationFilters()).toEqual({
+			continent: '',
+			country: '',
+			city: '',
+			asn: null,
+			network: '',
+			tags: [],
+			magic: '',
+		});
+	});
+
+	it('标签按空格与逗号切分', async () => {
+		await boot();
+		field('loc-tags').value = 'datacenter, europe  cloud';
+
+		expect(measure.readLocationFilters().tags).toEqual(['datacenter', 'europe', 'cloud']);
+	});
+
+	it('ASN 填数字时按数值返回', async () => {
+		await boot();
+		field('loc-asn').value = '24940';
+
+		expect(measure.readLocationFilters().asn).toBe(24940);
+	});
+
+	it('magic 在读取时就已归一化', async () => {
+		await boot();
+		field('loc-magic').value = 'A+1\nB+2';
+
+		expect(measure.readLocationFilters().magic).toBe('A+1, B+2');
+	});
+
+	it('writeMagic 写回 textarea', async () => {
+		await boot();
+
+		measure.writeMagic('Helsinki+FI+AS24940');
+
+		expect(document.getElementById('loc-magic')?.value).toBe('Helsinki+FI+AS24940');
+	});
+
+	it('writeMagic 在字段缺失时安全跳过', async () => {
+		await boot();
+		document.getElementById('loc-magic')?.remove();
+
+		expect(() => measure.writeMagic('x')).not.toThrow();
+	});
+});
+
+describe('开始测试时切换标签页', () => {
+	it('从其他标签页提交后切回测试结果', async () => {
+		const panel = await import('../../src/frontend/panel');
+		await boot();
+		panel.setActiveTab('probes');
+		expect(panel.getActiveTab()).toBe('probes');
+
+		field('target').value = 'example.com';
+		setQueue(jsonResponse({ id: 'mid-1' }, 202), measurement('finished'));
+		await submitForm();
+
+		expect(panel.getActiveTab()).toBe('results');
+	});
+
+	it('模式不可用时也切到测试结果（错误要显示在那里）', async () => {
+		const panel = await import('../../src/frontend/panel');
+		await boot();
+		panel.setActiveTab('matched');
+		quotaState.mode = 'unreachable';
+
+		field('target').value = 'example.com';
+		await submitForm();
+
+		expect(panel.getActiveTab()).toBe('results');
+		expect(renderResultsErrorMock).toHaveBeenCalled();
 	});
 });

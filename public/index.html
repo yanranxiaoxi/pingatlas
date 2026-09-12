@@ -93,9 +93,9 @@
 				<details class="advanced" open>
 					<summary data-i18n="locationSection">Location</summary>
 					<div class="grid-2">
-						<div class="field">
+						<div class="field field-wide">
 							<label for="loc-magic" data-i18n="locMagic">Magic</label>
-							<input id="loc-magic" class="input" type="text" autocomplete="off" spellcheck="false" data-i18n-placeholder="locMagicPlaceholder" placeholder="Germany / AS13335 / Europe / aws-us-east-1" />
+							<textarea id="loc-magic" class="input mono input-magic" rows="2" autocomplete="off" spellcheck="false" data-i18n-placeholder="locMagicPlaceholder" placeholder="Germany / AS13335 / Europe / aws-us-east-1"></textarea>
 						</div>
 						<div class="field">
 							<label for="loc-continent" data-i18n="locContinent">Continent</label>
@@ -339,7 +339,14 @@
 		</section>
 
 		<section class="panel result-panel">
-			<div id="results" class="results" aria-live="polite"></div>
+			<div id="result-tabs" class="panel-tabs" role="tablist" data-i18n-aria-label="resultPanelLabel" aria-label="Result panel">
+				<button id="tab-probes" class="panel-tab" type="button" role="tab" aria-controls="panel-probes" aria-selected="false" tabindex="-1" data-tab="probes" data-i18n="tabProbes">Probes</button>
+				<button id="tab-matched" class="panel-tab" type="button" role="tab" aria-controls="panel-matched" aria-selected="false" tabindex="-1" data-tab="matched" data-i18n="tabMatched">Matched probes</button>
+				<button id="tab-results" class="panel-tab" type="button" role="tab" aria-controls="results" aria-selected="true" data-tab="results" data-i18n="tabResults">Results</button>
+			</div>
+			<div id="panel-probes" class="panel-pane" role="tabpanel" aria-labelledby="tab-probes" hidden></div>
+			<div id="panel-matched" class="panel-pane" role="tabpanel" aria-labelledby="tab-matched" hidden></div>
+			<div id="results" class="results panel-pane" role="tabpanel" aria-labelledby="tab-results" aria-live="polite"></div>
 		</section>
 	</main>
 
@@ -359,6 +366,6 @@
 	</noscript>
 	<div id="toast-box" class="toast-box"></div>
 
-	<script type="module" src="/assets/main-KCGS6JWO.js"></script>
+	<script type="module" src="/assets/main-VG4UQQGE.js"></script>
 </body>
 </html>

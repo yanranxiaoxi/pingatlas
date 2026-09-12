@@ -304,6 +304,16 @@ textarea.input:focus {
 	min-height: 44px;
 }
 
+/* magic 是多条件输入：允许拖拽右下角拉高，免得长串条件只能看到一行 */
+.input-magic {
+	min-height: 62px;
+	max-height: 320px;
+	/* 拖拽右下角调整高度；宽度随列宽，不需要横向拖拽 */
+	resize: vertical;
+	line-height: 1.5;
+	font-size: 0.85rem;
+}
+
 .btn {
 	display: inline-flex;
 	align-items: center;
@@ -385,15 +395,156 @@ textarea.input:focus {
 	padding: 16px;
 }
 
-.form-panel {
-	position: sticky;
-	top: 72px;
-	max-height: calc(100dvh - 96px);
-	overflow-y: auto;
-}
+/*
+ * 表单面板故意不加 sticky / max-height / overflow-y：左右两列都是自然高度，
+ * 整页共用一条滚动条。
+ *
+ * sticky 与「内容高于视口」是矛盾的：面板会被钉在顶部，它超出视口的下半部分
+ * 就再也滚不到了。所以一旦去掉内部滚动，sticky 也必须一起去掉。
+ */
 
 .result-panel {
 	min-height: 240px;
+}
+
+/* ===== 结果面板标签页 ===== */
+/*
+ * 标签栏用换行而不是横向滚动。
+ *
+ * 这里不能写 overflow-x: auto：按 CSS 规范，一个轴不是 visible 时另一个轴会
+ * 被计算成 auto，于是「只为横向滚动」的声明也会让 overflow-y 变成 auto——而
+ * .panel-tab 的 margin-bottom: -1px（用于让激活下划线压住容器下边框）会让
+ * 内容比容器高 1px，多出来的这 1px 就变成了一条多余的纵向滚动条。
+ * 保持 overflow: visible + 允许换行，则任何轴上都不会出现滚动条。
+ */
+.panel-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-bottom: 12px;
+	border-bottom: 1px solid var(--border);
+}
+
+.panel-tab {
+	flex: 0 0 auto;
+	min-height: 34px;
+	padding: 6px 12px;
+	border: 0;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+	background: transparent;
+	color: var(--text-dim);
+	font-size: 0.85rem;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.panel-tab:hover {
+	color: var(--text);
+}
+
+.panel-tab.is-active {
+	color: var(--accent);
+	border-bottom-color: var(--accent);
+}
+
+.panel-tab:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
+	border-radius: 4px;
+}
+
+/*
+ * 面板切换只用 hidden 属性；显式声明 display:none，避免被 .results 的
+ * display:flex 之类的规则覆盖掉。
+ *
+ * 面板本身不限制高度：探针列表最多 160 行，一旦给 max-height 就会出现
+ * 「整页一条滚动条 + 面板内部一条滚动条」的双层滚动，很难操作。
+ */
+.panel-pane[hidden] {
+	display: none;
+}
+
+.probe-summary {
+	margin: 0 0 8px;
+	font-size: 0.78rem;
+	color: var(--text-dim);
+}
+
+/* 列表末尾重复同一句汇总：长列表滚到底时不必再滚回顶部确认总量 */
+.probe-summary-bottom {
+	margin: 8px 0 0;
+}
+
+.probe-state {
+	padding: 24px 12px;
+	text-align: center;
+	font-size: 0.85rem;
+	color: var(--text-dim);
+}
+
+.probe-table .probe-loc {
+	white-space: nowrap;
+}
+
+.probe-loc-text {
+	margin-left: 6px;
+}
+
+.probe-table .probe-network,
+.probe-table .probe-region {
+	overflow-wrap: anywhere;
+}
+
+/* 「Northern Europe · EU」折成三行很难读：保持单行，由 .table-wrap 横向滚动兜底 */
+.probe-table .probe-region {
+	white-space: nowrap;
+}
+
+.probe-tag-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.probe-tag {
+	font-size: 0.7rem;
+	color: var(--text-dim);
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	padding: 1px 7px;
+	white-space: nowrap;
+}
+
+.probe-table .probe-action {
+	width: 1%;
+	white-space: nowrap;
+	text-align: right;
+}
+
+.probe-add,
+.probe-remove {
+	width: 28px;
+	height: 28px;
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.probe-add {
+	color: var(--accent);
+	border-color: var(--accent);
+}
+
+.probe-remove {
+	color: var(--danger);
+	border-color: var(--border);
+}
+
+.probe-broad {
+	font-size: 0.7rem;
+	white-space: nowrap;
 }
 
 /* ===== 表单 ===== */
@@ -446,7 +597,10 @@ textarea.input:focus {
 }
 
 /* ===== 位置筛选自动补全面板 ===== */
-/* 挂到 body 上并用 fixed 定位，避免被 .form-panel 的滚动容器裁切 */
+/*
+ * 自动补全面板是挂在 body 上的浮层，用 fixed + 视口坐标定位，不参与文档流，
+ * 因此与页内面板不同：它必须自己限高，否则 5000 条候选会伸展到视口之外。
+ */
 .suggest-panel {
 	position: fixed;
 	z-index: 90;
@@ -1088,11 +1242,14 @@ textarea.input:focus {
 	transform: rotate(90deg);
 }
 
+/*
+ * 原始输出：高度由内容决定，不再限高。长行仍需横向滚动（相当于代码块），
+ * 只保留 overflow-x 即可——高度不受限时不会出现纵向滚动条。
+ */
 .raw-text {
 	margin: 0;
 	padding: 10px;
-	max-height: 340px;
-	overflow: auto;
+	overflow-x: auto;
 	font-size: 0.76rem;
 	line-height: 1.5;
 	white-space: pre;
@@ -1422,12 +1579,6 @@ body.modal-open {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
-	.form-panel {
-		position: static;
-		max-height: none;
-		overflow: visible;
-	}
-
 	.footer-meta {
 		text-align: left;
 	}
@@ -1469,6 +1620,16 @@ body.modal-open {
 	.icon-btn {
 		width: 42px;
 		height: 42px;
+	}
+
+	.panel-tab {
+		min-height: 42px;
+	}
+
+	.probe-add,
+	.probe-remove {
+		width: 38px;
+		height: 38px;
 	}
 
 	.select-sm {
@@ -1687,6 +1848,17 @@ body.modal-open {
 	.icon-btn {
 		width: 42px;
 		height: 42px;
+	}
+
+	/* 标签页与探针列表的增删按钮同样要够大 */
+	.panel-tab {
+		min-height: 42px;
+	}
+
+	.probe-add,
+	.probe-remove {
+		width: 38px;
+		height: 38px;
 	}
 
 	.suggest-item {

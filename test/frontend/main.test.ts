@@ -8,6 +8,18 @@ const initQuotaMock = jest.fn();
 const setPreferenceMock = jest.fn();
 const syncAuthMock = jest.fn();
 const initMeasureFormMock = jest.fn();
+const initProbeListsMock = jest.fn();
+
+/** 位置筛选的空白基线：main.ts 会把它透传给探针列表 */
+const EMPTY_FILTERS = {
+	continent: '',
+	country: '',
+	city: '',
+	asn: null,
+	network: '',
+	tags: [] as string[],
+	magic: '',
+};
 const renderAuthMock = jest.fn();
 const initThemeMock = jest.fn();
 const toggleThemeMock = jest.fn();
@@ -71,6 +83,12 @@ jest.unstable_mockModule('../../src/frontend/auth', () => ({
 
 jest.unstable_mockModule('../../src/frontend/measure', () => ({
 	initMeasureForm: initMeasureFormMock,
+	readLocationFilters: () => EMPTY_FILTERS,
+	writeMagic: () => {},
+}));
+
+jest.unstable_mockModule('../../src/frontend/probe-list', () => ({
+	initProbeLists: initProbeListsMock,
 }));
 
 jest.unstable_mockModule('../../src/frontend/theme', () => ({

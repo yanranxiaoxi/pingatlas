@@ -1,6 +1,7 @@
 import type { AddressInfo } from 'node:net';
 import type { VenNodeDriver } from '../../src/utils/venation/driver';
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
+import { PROBE_LIST_URL } from '../../src/frontend/probes';
 import { resetEnv } from '../helpers/env';
 import { publicDir } from '../helpers/paths';
 
@@ -155,6 +156,38 @@ describe('端到端 HTTP 服务（未配置服务端令牌）', () => {
 		expect(await res.json()).toEqual({
 			error: { type: 'upstream_error', message: 'Globalping API is unreachable' },
 		});
+	});
+
+	it('GET /api/probe-list 与 /api/probes 同样无需登录', async () => {
+		const res = await fetch(`${server.baseUrl}/api/probe-list`);
+
+		expect(res.status).toBe(502);
+		expect(await res.json()).toEqual({
+			error: { type: 'upstream_error', message: 'Globalping API is unreachable' },
+		});
+	});
+
+	it('前端 probes 模块请求的路径能命中后端路由（不出现 404）', async () => {
+		const realFetch = globalThis.fetch;
+		let requested = '';
+		globalThis.fetch = (async (input: RequestInfo | URL) => {
+			requested = String(input);
+			// 返回空数组，让 loadProbeList 走完正常分支
+			return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } });
+		}) as typeof fetch;
+		try {
+			const probes = await import('../../src/frontend/probes');
+			probes.resetProbeListCache();
+			await probes.loadProbeList();
+		}
+		finally {
+			globalThis.fetch = realFetch;
+		}
+
+		expect(requested).toBe(PROBE_LIST_URL);
+		// 路由存在（上游不可达是 502），只有路径写错才会是 404
+		const res = await realFetch(`${server.baseUrl}${requested}`);
+		expect(res.status).not.toBe(404);
 	});
 
 	it('未配置 OIDC 时 /api/auth/login 返回 503', async () => {

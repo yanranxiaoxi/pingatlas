@@ -342,9 +342,12 @@ export function matchCandidates(
 
 let instanceSeq = 0;
 
+/** 补全面板可以挂在 input 或 textarea 上（magic 字段是可拖拽高度的 textarea） */
+export type SuggestInput = HTMLInputElement | HTMLTextAreaElement;
+
 /** 一个输入框对应的补全面板实例 */
 interface Instance {
-	input: HTMLInputElement;
+	input: SuggestInput;
 	root: HTMLElement;
 	list: HTMLElement;
 	kind: ProbeIndexKind | 'mixed';
@@ -361,7 +364,7 @@ const instances = new Set<Instance>();
 
 export interface SuggestBinding {
 	/** 目标输入框：元素本身或元素 id */
-	input: string | HTMLInputElement;
+	input: string | SuggestInput;
 	/** 候选来源；magic 字段用 `mixed` 混合全部来源 */
 	source: ProbeIndexKind | 'mixed';
 	/** 多值输入（如 tags）：只补全光标所在的最后一个片段 */
@@ -374,11 +377,12 @@ function buildPool(index: ProbeIndex, source: Instance['kind']): SuggestCandidat
 }
 
 /** 取出「光标所在的片段」，供多值输入替换用 */
-function readSegment(input: HTMLInputElement, multiple: boolean): { start: number; end: number; query: string } {
+function readSegment(input: SuggestInput, multiple: boolean): { start: number; end: number; query: string } {
 	const value = input.value;
 	if (!multiple) {
 		return { start: 0, end: value.length, query: value };
 	}
+	// textarea 同样实现了 selectionStart；早期 jsdom 缺失时退回值末尾
 	const caret = input.selectionStart ?? value.length;
 	const before = value.slice(0, caret);
 	const head = /[^,\s]*$/.exec(before)?.[0] ?? '';
@@ -596,7 +600,13 @@ function bindInput(instance: Instance): void {
 			}
 		}, 150);
 	});
-	input.addEventListener('keydown', (event) => {
+	/*
+	 * 键盘事件单独绑定到 HTMLElement 视图上。
+	 * `input` 是 input/textarea 的联合类型，直接在其上调用 addEventListener 时
+	 * TypeScript 无法收窄到 keydown 重载，handler 会被推断成泛型 Event 而取不到 key。
+	 */
+	const keyTarget: HTMLElement = input;
+	keyTarget.addEventListener('keydown', (event: KeyboardEvent) => {
 		const opened = instance.open && instance.options.length > 0;
 		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
 			event.preventDefault();
@@ -637,7 +647,7 @@ function bindInput(instance: Instance): void {
 /** 为一个输入框挂上自动补全；重复调用同一输入框时先解绑旧的 */
 export function attachSuggest(binding: SuggestBinding): void {
 	const input = typeof binding.input === 'string'
-		? document.getElementById(binding.input) as HTMLInputElement | null
+		? document.getElementById(binding.input) as SuggestInput | null
 		: binding.input;
 	if (!input) {
 		return;
