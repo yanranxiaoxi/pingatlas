@@ -117,13 +117,18 @@ export function renderAuth(container: HTMLElement, status: AuthStatus): void {
 		 * 配置了用户中心就把用户名渲染成链接。
 		 *
 		 * 用 `<a href>` 而不是点击事件：中键新标签、右键复制链接等浏览器行为都可
-		 * 直接用。提示只加在 `title` 上而不加 `aria-label`——后者会覆盖链接的可
-		 * 访问名称，读屏就念不出用户名了。
+		 * 直接用。在新标签页打开，避免用户带着当前页面已经跑起来的测量跳走。
+		 * `noopener` 必须有：新页面通过 `window.opener` 可以把原标签页改写成钓鱼
+		 * 页（reverse tabnabbing）；`noreferrer` 与项目里其它外链保持一致。
+		 * 提示只加在 `title` 上而不加 `aria-label`——后者会覆盖链接的可访问名称，
+		 * 读屏就念不出用户名了。
 		 */
 		const chip = status.accountUrl
 			? el('a', {
 					class: 'user-chip user-chip-link',
 					href: status.accountUrl,
+					target: '_blank',
+					rel: 'noopener noreferrer',
 					title: t('accountCenter'),
 				}, [status.user.username])
 			: el('span', { class: 'user-chip' }, [status.user.username]);

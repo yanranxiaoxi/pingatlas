@@ -121,6 +121,29 @@ describe('用户名跳转用户中心', () => {
 		expect(chip.textContent).toBe('bob');
 	});
 
+	it('在新标签页打开，避免跳走时丢掉当前页面的测量', () => {
+		auth.renderAuth(container, status({
+			loggedIn: true,
+			user: { username: 'bob' },
+			accountUrl: 'https://sso.example.test/account',
+		}));
+
+		const chip = container.querySelector('.user-chip') as HTMLAnchorElement;
+		expect(chip.getAttribute('target')).toBe('_blank');
+	});
+
+	it('带 noopener，防止新页面通过 window.opener 改写原标签页', () => {
+		auth.renderAuth(container, status({
+			loggedIn: true,
+			user: { username: 'bob' },
+			accountUrl: 'https://sso.example.test/account',
+		}));
+
+		const chip = container.querySelector('.user-chip') as HTMLAnchorElement;
+		// target=_blank 必须配 noopener，否则存在 reverse tabnabbing 风险
+		expect(chip.getAttribute('rel')).toContain('noopener');
+	});
+
 	it('accountUrl 为空串时按未配置处理', () => {
 		auth.renderAuth(container, status({ loggedIn: true, user: { username: 'bob' }, accountUrl: '' }));
 

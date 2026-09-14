@@ -32,7 +32,7 @@
 	"continentNA": "North America",
 	"continentOC": "Oceania",
 	"continentSA": "South America",
-	"locCountry": "Country",
+	"locCountry": "Country/Region",
 	"locCountryPlaceholder": "DE or Poland",
 	"locCity": "City",
 	"locCityPlaceholder": "Frankfurt",

@@ -232,9 +232,11 @@ bug that is easy to miss:
   on this project's own `.btn` / `.select` styling. Keep the two areas in sync when either changes
 - The user chip is an `<a href>` when the server sends `accountUrl` and a `<span>` otherwise, so the
   unconfigured case is not focusable or clickable at all. Using a real anchor rather than a click
-  handler keeps middle-click and "copy link" working. The hint goes in `title`, never `aria-label`:
-  the latter would replace the link's accessible name and screen readers would stop announcing the
-  username
+  handler keeps middle-click and "copy link" working. It opens in a new tab (`target="_blank"` with
+  `rel="noopener noreferrer"`) so leaving for the account centre does not drop a measurement that is
+  already running; `noopener` is required, since without it the new page can rewrite the original
+  tab through `window.opener`. The hint goes in `title`, never `aria-label`: the latter would replace
+  the link's accessible name and screen readers would stop announcing the username
 - Service worker caches the app shell network-first and skips `/api/` and cross-origin requests
 - `src/frontend/location-suggest.ts` turns each location input into an ARIA combobox. The probe index
   is loaded lazily on first focus, then cached in memory → `localStorage` (`pa-probe-index`, 24 h TTL,

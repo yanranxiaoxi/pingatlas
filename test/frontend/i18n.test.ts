@@ -257,4 +257,29 @@ describe('locale 文件一致性', () => {
 			expect(empty).toEqual([]);
 		}
 	});
+
+	/*
+	 * 「国家/地区」这类把两个概念合在一起的标签，英文也必须带出第二个概念。
+	 *
+	 * 中文写成「国家/地区」而英文只写 `Country` 时，英文界面会把字段的含义缩窄一半，
+	 * 用户以为只能填国家。这里按「中文含 `/` 则英文也须含 `/`」做机械校验，
+	 * 覆盖 `locCountry` 及以后新增的同类标签。
+	 */
+	it('中文用「/」并列概念时，英文也带出对应概念', () => {
+		const en = JSON.parse(readFileSync(join(publicDir, 'locales', 'en.json'), 'utf8')) as Record<string, string>;
+		const zh = JSON.parse(readFileSync(join(publicDir, 'locales', 'zh-Hans.json'), 'utf8')) as Record<string, string>;
+		const missing = Object.keys(zh)
+			.filter(key => zh[key].includes('/') && !en[key]?.includes('/'))
+			.map(key => `${key}: zh=${zh[key]} en=${en[key]}`);
+
+		expect(missing).toEqual([]);
+	});
+
+	it('国家/地区标签在两种语言下都覆盖「国家」与「地区」两层含义', () => {
+		const en = JSON.parse(readFileSync(join(publicDir, 'locales', 'en.json'), 'utf8')) as Record<string, string>;
+		const zh = JSON.parse(readFileSync(join(publicDir, 'locales', 'zh-Hans.json'), 'utf8')) as Record<string, string>;
+
+		expect(zh.locCountry).toBe('国家/地区');
+		expect(en.locCountry).toBe('Country/Region');
+	});
 });
