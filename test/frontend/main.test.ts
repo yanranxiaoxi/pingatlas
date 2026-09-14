@@ -9,6 +9,7 @@ const setPreferenceMock = jest.fn();
 const syncAuthMock = jest.fn();
 const initMeasureFormMock = jest.fn();
 const initProbeListsMock = jest.fn();
+const initScrollChromeMock = jest.fn();
 
 /** 位置筛选的空白基线：main.ts 会把它透传给探针列表 */
 const EMPTY_FILTERS = {
@@ -91,6 +92,10 @@ jest.unstable_mockModule('../../src/frontend/probe-list', () => ({
 	initProbeLists: initProbeListsMock,
 }));
 
+jest.unstable_mockModule('../../src/frontend/scroll-chrome', () => ({
+	initScrollChrome: initScrollChromeMock,
+}));
+
 jest.unstable_mockModule('../../src/frontend/theme', () => ({
 	initTheme: initThemeMock,
 	toggleTheme: toggleThemeMock,
@@ -109,13 +114,13 @@ function snapshot(overrides: Partial<QuotaSnapshot> = {}): QuotaSnapshot {
 }
 
 const HTML = `
-	<header>
+	<header class="topbar">
 		<select id="lang-select"></select>
 		<button id="theme-toggle" type="button"></button>
 		<div id="user-area"></div>
 	</header>
 	<main id="results"></main>
-	<footer>
+	<footer class="footer">
 		<p id="footer-note"></p>
 		<p id="footer-credit"></p>
 		<span id="footer-version"></span>
@@ -173,6 +178,7 @@ beforeEach(() => {
 	setPreferenceMock.mockReset();
 	setLangMock.mockReset();
 	renderAuthMock.mockClear();
+	initScrollChromeMock.mockClear();
 });
 
 async function loadMain(): Promise<void> {
@@ -191,6 +197,38 @@ describe('启动流程', () => {
 		expect(initMeasureFormMock).toHaveBeenCalledWith(document.getElementById('results'));
 		expect(quotaCallbacks).toHaveLength(1);
 		expect(authCallbacks).toHaveLength(1);
+	});
+
+	/**
+	 * 接线测试：模块自身的行为由 `scroll-chrome.test.ts` 覆盖，这里只确认 main.ts
+	 * 真的把两个固定区域交给了它。
+	 *
+	 * 骨架里必须带 `.topbar` / `.footer` 类名，否则 `querySelector` 取到 null，
+	 * 模块会静默退回空操作，接线错误就测不出来了。
+	 */
+	it('把顶栏与页脚交给滚动收起模块', async () => {
+		await loadMain();
+
+		expect(initScrollChromeMock).toHaveBeenCalledTimes(1);
+		expect(initScrollChromeMock).toHaveBeenCalledWith({
+			top: document.querySelector('.topbar'),
+			bottom: document.querySelector('.footer'),
+		});
+	});
+
+	it('传入的确实是顶栏与页脚元素', async () => {
+		await loadMain();
+		const options = initScrollChromeMock.mock.calls[0]![0] as { top: Element | null; bottom: Element | null };
+
+		expect(options.top?.tagName).toBe('HEADER');
+		expect(options.bottom?.tagName).toBe('FOOTER');
+	});
+
+	it('骨架缺少两个区域时不影响启动', async () => {
+		document.querySelector('.topbar')?.remove();
+		document.querySelector('.footer')?.remove();
+
+		await expect(loadMain()).resolves.toBeUndefined();
 	});
 
 	it('缺少结果容器时不初始化测量表单', async () => {

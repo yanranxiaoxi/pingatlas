@@ -187,6 +187,20 @@ autocomplete and the probe list only hits the upstream once. The browser keeps i
 - i18n dictionaries at `public/locales/{en,zh-Hans}.json`, resolved at runtime, with `en` as the
   fallback; switching language reloads the page
 - Theme follows `prefers-color-scheme` and can be overridden; the choice is persisted
+- On small screens (`MOBILE_QUERY` in `src/frontend/scroll-chrome.ts`, which must stay in sync with
+the media query that defines the collapse in `public/css/style.css`) the top bar and the footer
+slide out of view while scrolling down and slide back on any upward scroll or near the page top;
+desktop keeps both always visible. Three constraints make this work, and breaking any of them
+reintroduces a bug that is easy to miss:
+  - Collapsing uses `transform` only, never height/`display`: both bars are `sticky`, so they keep
+    occupying their space and the document does not reflow (content never jumps)
+  - A collapsed bar gets `inert`, otherwise its buttons stay in the focus order while being off
+    screen, and Tab moves focus into nothing. Collapsing is also refused while focus is inside a bar
+  - The footer additionally requires more than its own height of scrollable space below the
+    viewport before it may collapse. `transform` makes the box count towards scrollable overflow,
+    so a collapsed footer grows the document by exactly its own height; near the page bottom that
+    extra space is a visible blank band, and it would yank the scroll position when the footer
+    returns. The check folds that growth back out (`scrollHeight - height` while hidden)
 - Region names and flags go through one override layer in `src/frontend/ui.ts`
   (`REGION_OVERRIDES`, keyed by ISO 3166-1 alpha-2). Globalping tags every probe with an ISO code,
   and neither `Intl.DisplayNames` nor the flag emoji derived from the code necessarily matches the
@@ -260,6 +274,14 @@ autocomplete and the probe list only hits the upstream once. The browser keeps i
     underline cover the container border) makes the content 1px taller than the box, that 1px
     rendered as a stray vertical scrollbar. The three labels are short, so the bar uses
     `flex-wrap: wrap` instead and never needs to scroll
+  - The `max-width: 620px` rule for `.container` must stay a single-axis declaration
+    (`padding-inline`). `.topbar-inner` and `.footer-inner` also carry the `container` class, and
+    that rule sits at the end of the stylesheet with the same specificity (one class each), so a
+    `padding` shorthand silently zeroes **their** vertical padding too — the top bar and the footer
+    then have their text flush against the edges on narrow screens, while wide screens look fine
+    (the breakpoint does not apply). `responsive.test.ts` pins both the single-axis form and the
+    vertical padding of the two selectors. The top bar additionally widens its own gutter to 10px
+    below 620px, since its controls grow to 42px there
 - Magic fragments are built as `City+Country+AS<asn>[+datacenter-network][+eyeball-network]`
   (`probeFragment`), the shape Globalping's magic accepts and the one verified against the live API.
   Matching (`probes.ts`) mirrors Globalping: comma separates **OR** conditions, `+` separates **AND**
@@ -280,20 +302,28 @@ autocomplete and the probe list only hits the upstream once. The browser keeps i
   under ESM) and `test/setup/env.ts` pins a baseline environment before every suite
 - `test/backend` — framework glue: router, venation driver/transport, config, logger, cookie,
   session, request/respond/mime helpers; `test/service` — OIDC; `test/frontend` — jsdom suites for
-  every SPA module plus two stylesheet-level suites: `responsive.test.ts` parses
-  `public/css/style.css` and asserts the narrow-screen table rules stay in place, and
-  `quota-note.test.ts` pins the quota-meter note layout (direct-child flex items with a horizontal
-  gap rather than pseudo-element punctuation) and the short mode labels, while
-  `footer-credit.test.ts` renders the footer attribution from the real locale files and pins the
-  three outbound links; `test/integration` — controllers plus an end-to-end run against a real
-  `node:http` server started from `createServer()`
+  every SPA module, plus stylesheet-level suites that parse `public/css/style.css` so a rule and the
+  code depending on it cannot drift apart:
+  - `responsive.test.ts` — the narrow-screen table rules, the touch-target sizes, and the
+    `.container` single-axis padding rule that the top bar and footer rely on
+  - `quota-note.test.ts` — the quota-meter note layout (direct-child flex items with a horizontal
+    gap rather than pseudo-element punctuation) and the short mode labels
+  - `footer-credit.test.ts` — renders the footer attribution from the real locale files and pins the
+    three outbound links
+  - `probe-tabs.test.ts` — the result-panel tab markup, the magic textarea, and the probe-list
+    styles
+  - `scroll-chrome.test.ts` — that `MOBILE_QUERY` matches the breakpoint in the stylesheet, that
+    the collapse uses `transform` only, and that `.chrome-hidden` is applied per region
+
+  `test/integration` — controllers plus an end-to-end run against a real `node:http` server started
+  from `createServer()`
 - `test/backend/probe-index.test.ts` covers the index builder (de-duplication, count aggregation,
   ordering, malformed input) and `test/frontend/location-suggest.test.ts` covers autocomplete end to
   end: scoring tiers, subsequence matching, diacritic/case folding, index caching & TTL behaviour,
   panel positioning/flipping and every keyboard interaction. jsdom has no global `Response`, so the
   suite injects a minimal stand-in, and `ui` is mocked with deterministic English country names
   because the real `countryName()` depends on the host locale
-- 37 suites / 951 cases, ~98.3% lines. Remaining uncovered branches are defensive guards that no
+- 38 suites / 1007 cases, ~98.4% lines. Remaining uncovered branches are defensive guards that no
   code path can reach (e.g. `compact()`'s empty-object skip, `buildMeasurementOptions()`'s
   type-guarded `default`, `pollMeasurement()`'s second token check) or need real navigation
   (`window.location.href` assignments, which jsdom cannot perform)

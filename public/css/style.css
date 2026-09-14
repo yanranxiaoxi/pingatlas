@@ -1585,8 +1585,16 @@ body.modal-open {
 }
 
 @media (max-width: 620px) {
+	/*
+	 * 只收窄横向间距。
+	 *
+	 * 这里不能用简写 padding：.topbar-inner 与 .footer-inner 同时带有 container 类，
+	 * 而本规则在样式表末尾、特异性又与之相同（都是单个类），简写会把它们的
+	 * padding-top / padding-bottom 一并清零，于是顶栏与页脚的文字直接贴到边沿。
+	 * 用 padding-inline 只改横向，纵向留给各自的规则。
+	 */
 	.container {
-		padding: 0 12px;
+		padding-inline: 12px;
 	}
 
 	.layout {
@@ -1660,6 +1668,11 @@ body.modal-open {
 
 	.topbar-inner {
 		gap: 8px;
+		/*
+		 * 窄屏下按钮会放大到 42px（见下方触控目标相关的规则），
+		 * 桌面端的 6px 上下留白此时会让内容显得贴边，这里放宽到 10px。
+		 */
+		padding-block: 10px;
 	}
 
 	/*
@@ -1699,6 +1712,7 @@ body.modal-open {
 		width: 100%;
 	}
 
+	/* 页脚的 10px 上下留白由基础规则提供，这里只收窄列间距 */
 	.footer-inner {
 		gap: 10px;
 	}
@@ -1831,6 +1845,30 @@ body.modal-open {
 	* {
 		animation-duration: 0.01ms !important;
 		transition-duration: 0.01ms !important;
+	}
+}
+
+/*
+ * 小屏滚动时收起顶栏与页脚
+ *
+ * 由 `src/frontend/scroll-chrome.ts` 给对应区域加 `.chrome-hidden`；断点必须与该模块
+ * 导出的 MOBILE_QUERY 一致。
+ *
+ * 用 transform 而不是高度或 display：两个区域都是 sticky，仍然占据原本的空间，
+ * 页面不会重排，正文也不会跳动。
+ */
+@media (max-width: 620px) {
+	.topbar,
+	.footer {
+		transition: transform 0.25s ease;
+	}
+
+	.topbar.chrome-hidden {
+		transform: translateY(-100%);
+	}
+
+	.footer.chrome-hidden {
+		transform: translateY(100%);
 	}
 }
 

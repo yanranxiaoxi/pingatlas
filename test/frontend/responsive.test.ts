@@ -95,3 +95,41 @@ describe('响应式样式：窄屏表格', () => {
 		expect(touch).toContain('min-height: 42px;');
 	});
 });
+
+/**
+ * 回归护栏：窄屏下顶栏与页脚的纵向留白曾被清零
+ *
+ * `.topbar-inner` 与 `.footer-inner` 同时带有 `container` 类。窄屏断点里那条
+ * `.container { padding: 0 12px }` 是简写，加上它位于样式表末尾、特异性又和这两个
+ * 选择器相同（都是单个类），于是把它们的 padding-top / padding-bottom 一并清零，
+ * 结果是顶栏与页脚的文字直接贴到上下边沿。改为只写横向（padding-inline）后，
+ * 纵向留白由各自的规则决定。
+ */
+describe('窄屏：顶栏与页脚的纵向留白', () => {
+	const narrow = mediaBlock('(max-width: 620px)');
+	const containerRule = narrow.slice(narrow.indexOf('.container {'), narrow.indexOf('.container {') + 160);
+
+	it('窄屏的 .container 只改横向间距，不用简写 padding', () => {
+		expect(containerRule).toContain('padding-inline: 12px;');
+		// 简写会连带清零 topbar-inner / footer-inner 的纵向内边距
+		expect(containerRule).not.toMatch(/padding: 0 12px/);
+	});
+
+	it('两个共用 container 类的元素在基础样式里声明了纵向留白', () => {
+		expect(flat(baseCss)).toContain('.topbar-inner {');
+		expect(flat(baseCss)).toMatch(/\.topbar-inner \{[^}]*padding-top: 6px;[^}]*padding-bottom: 6px;/);
+		expect(flat(baseCss)).toContain('.footer-inner {');
+		expect(flat(baseCss)).toMatch(/\.footer-inner \{[^}]*padding-top: 10px;[^}]*padding-bottom: 10px;/);
+	});
+
+	it('窄屏放宽顶栏留白，容纳放大后的 42px 控件', () => {
+		const topbar = narrow.slice(narrow.indexOf('.topbar-inner {'), narrow.indexOf('.topbar-inner {') + 220);
+		expect(topbar).toContain('padding-block: 10px;');
+	});
+
+	it('页脚沿用基础样式的 10px，不在窄屏重复声明', () => {
+		const footer = narrow.slice(narrow.indexOf('.footer-inner {'), narrow.indexOf('.footer-inner {') + 120);
+		expect(footer).toContain('gap: 10px;');
+		expect(footer).not.toContain('padding');
+	});
+});

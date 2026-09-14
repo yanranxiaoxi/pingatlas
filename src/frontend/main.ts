@@ -13,6 +13,7 @@ import {
 	setPreference,
 	syncAuth,
 } from './quota';
+import { initScrollChrome } from './scroll-chrome';
 import { initTheme, toggleTheme } from './theme';
 import { el, formatCountdown, textWithLinks, toast } from './ui';
 
@@ -213,6 +214,12 @@ async function main(): Promise<void> {
 	buildHeader();
 	buildFooter();
 	handleLoginFlag();
+
+	// 小屏滚动时收起顶栏与页脚；桌面端由 MOBILE_QUERY 决定保持常显
+	initScrollChrome({
+		top: document.querySelector<HTMLElement>('.topbar'),
+		bottom: document.querySelector<HTMLElement>('.footer'),
+	});
 
 	meterContainer = document.getElementById('quota-meters');
 	onQuotaChange(renderQuotaMeters);
