@@ -197,6 +197,7 @@
 	"login": "登录",
 	"loginFailed": "登录失败，请重试。",
 	"ssoLogin": "使用 OpenID Connect 登录",
+	"accountCenter": "用户中心",
 	"logout": "退出登录",
 	"logoutConfirm": "要如何退出登录？",
 	"logoutLocal": "仅退出当前服务",

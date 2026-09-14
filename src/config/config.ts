@@ -73,6 +73,29 @@ function resolvePostLogoutRedirectUri(): string {
 	}
 }
 
+/**
+ * 解析 SSO 用户中心地址
+ *
+ * 配置后前端把用户名渲染成指向该地址的链接，用于跳转到 IdP 的用户中心。
+ *
+ * 只接受 http/https：该值会作为 `<a href>` 下发到页面，若误配成 `javascript:`
+ * 之类的协议，点击用户名就会执行脚本，因此直接丢弃而不是原样透传。
+ * 留空或非法时返回空串，此时用户名保持为纯文本。
+ */
+function resolveAccountUrl(): string {
+	const raw = validateOptionalEnvVar('OIDC_ACCOUNT_URL', process.env.OIDC_ACCOUNT_URL);
+	if (!raw) {
+		return '';
+	}
+	try {
+		const { protocol } = new URL(raw);
+		return protocol === 'http:' || protocol === 'https:' ? raw : '';
+	}
+	catch {
+		return '';
+	}
+}
+
 export const CONFIG = {
 	env: validateEnvVar('ENV_PRODUCT', process.env.ENV_PRODUCT, 'development'),
 	host: validateEnvVar('SERVER_HOST', process.env.SERVER_HOST, '0.0.0.0'),
@@ -106,6 +129,8 @@ export const CONFIG = {
 		providerName: validateOptionalEnvVar('OIDC_PROVIDER_NAME', process.env.OIDC_PROVIDER_NAME),
 		/** 登出 SSO 时 IdP 回跳地址；留空则自动取 OIDC_REDIRECT_URI 的站点根 */
 		postLogoutRedirectUri: resolvePostLogoutRedirectUri(),
+		/** SSO 用户中心地址；配置后登录时用户名变为可点击链接 */
+		accountUrl: resolveAccountUrl(),
 	},
 
 	/** 会话配置 */

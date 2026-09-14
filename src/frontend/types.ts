@@ -19,6 +19,8 @@ export interface AuthStatus {
 	loggedIn: boolean;
 	authEnabled: boolean;
 	providerName?: string;
+	/** SSO 用户中心地址；配置后用户名渲染为指向它的链接 */
+	accountUrl?: string;
 	user: AuthUser | null;
 }
 

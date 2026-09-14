@@ -84,6 +84,7 @@ Browser ── local quota left ────────► {GP_API_URL}/v1/meas
 | `OIDC_SCOPE` | no | `openid profile email` | Requested scope |
 | `OIDC_USERNAME_CLAIM` | no | `preferred_username` | Claim used as the user name (use `name`/`sub` for IdPs without it) |
 | `OIDC_PROVIDER_NAME` | no | localized default | SSO provider name shown on the login dialog button |
+| `OIDC_ACCOUNT_URL` | no | — | SSO account centre URL; when set, the user name in the top bar becomes a link to it (`http`/`https` only) |
 | `OIDC_POST_LOGOUT_REDIRECT_URI` | no | site root of `OIDC_REDIRECT_URI` | Where the IdP returns after "also sign out of SSO"; register it at the IdP |
 | `SESSION_SECRET` | no* | — | ≥32 random chars used to sign the session cookie |
 | `SESSION_COOKIE_NAME` | no | `pa_session` | Session cookie name |

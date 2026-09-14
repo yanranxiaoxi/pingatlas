@@ -113,7 +113,20 @@ export function renderAuth(container: HTMLElement, status: AuthStatus): void {
 	}
 
 	if (status.loggedIn && status.user) {
-		const chip = el('span', { class: 'user-chip' }, [status.user.username]);
+		/*
+		 * 配置了用户中心就把用户名渲染成链接。
+		 *
+		 * 用 `<a href>` 而不是点击事件：中键新标签、右键复制链接等浏览器行为都可
+		 * 直接用。提示只加在 `title` 上而不加 `aria-label`——后者会覆盖链接的可
+		 * 访问名称，读屏就念不出用户名了。
+		 */
+		const chip = status.accountUrl
+			? el('a', {
+					class: 'user-chip user-chip-link',
+					href: status.accountUrl,
+					title: t('accountCenter'),
+				}, [status.user.username])
+			: el('span', { class: 'user-chip' }, [status.user.username]);
 
 		const logout = el('button', { class: 'btn ghost', type: 'button' }, [t('logout')]);
 		logout.addEventListener('click', () => openLogoutModal(logout));

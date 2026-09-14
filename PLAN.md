@@ -160,7 +160,7 @@ error bodies and status codes can be passed through unchanged.
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
 | `GET` | `/api/config` | public | `{ apiUrl, proxyAvailable, maxProbes }` |
-| `GET` | `/api/auth/status` | public | `{ loggedIn, authEnabled, user }` |
+| `GET` | `/api/auth/status` | public | `{ loggedIn, authEnabled, providerName?, accountUrl?, user }` |
 | `GET` | `/api/auth/login` | public | 302 → IdP |
 | `GET` | `/api/auth/callback` | public | code exchange → session cookie → `/` |
 | `GET` | `/api/auth/logout` | public | clear session, optional IdP end-session redirect |
@@ -172,6 +172,13 @@ error bodies and status codes can be passed through unchanged.
 
 `GP_TOKEN` is never sent to the browser. Upstream errors are mapped to `502 { error: { type: 'upstream_error' } }`
 so the front end can render them with the same code path as native API errors.
+
+`/api/auth/status` also carries `providerName` (`OIDC_PROVIDER_NAME`) and `accountUrl`
+(`OIDC_ACCOUNT_URL`), both optional and both omitted when unset. `accountUrl` is the SSO account
+centre: when present, the username in the top bar renders as an `<a href>` to it instead of plain
+text. It is only accepted when it parses as `http`/`https` — the value becomes an `<a href>` in the
+page, so a misconfigured `javascript:` (or `data:`) value would turn clicking the username into
+script execution. Invalid values are dropped at config load rather than passed through.
 
 `GET /api/probes` is the one upstream call that carries no token: it fetches `GET /v1/probes` once and
 folds the 5000+ entries (2.1 MB) into a de-duplicated index that `src/utils/probe-index.ts` builds —
@@ -223,6 +230,11 @@ bug that is easy to miss:
   sign-in / sign-out modals follow one shared visual spec. Their rules live in the `.topbar-actions`
   / `.modal-dialog` scoped blocks of `public/css/style.css`, which keeps the form and result areas
   on this project's own `.btn` / `.select` styling. Keep the two areas in sync when either changes
+- The user chip is an `<a href>` when the server sends `accountUrl` and a `<span>` otherwise, so the
+  unconfigured case is not focusable or clickable at all. Using a real anchor rather than a click
+  handler keeps middle-click and "copy link" working. The hint goes in `title`, never `aria-label`:
+  the latter would replace the link's accessible name and screen readers would stop announcing the
+  username
 - Service worker caches the app shell network-first and skips `/api/` and cross-origin requests
 - `src/frontend/location-suggest.ts` turns each location input into an ARIA combobox. The probe index
   is loaded lazily on first focus, then cached in memory → `localStorage` (`pa-probe-index`, 24 h TTL,
@@ -332,7 +344,7 @@ bug that is easy to miss:
   panel positioning/flipping and every keyboard interaction. jsdom has no global `Response`, so the
   suite injects a minimal stand-in, and `ui` is mocked with deterministic English country names
   because the real `countryName()` depends on the host locale
-- 38 suites / 1012 cases, ~98.4% lines. Remaining uncovered branches are defensive guards that no
+- 38 suites / 1027 cases, ~98.4% lines. Remaining uncovered branches are defensive guards that no
   code path can reach (e.g. `compact()`'s empty-object skip, `buildMeasurementOptions()`'s
   type-guarded `default`, `pollMeasurement()`'s second token check) or need real navigation
   (`window.location.href` assignments, which jsdom cannot perform)

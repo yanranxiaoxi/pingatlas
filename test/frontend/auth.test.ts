@@ -82,6 +82,71 @@ describe('renderAuth 基础渲染', () => {
 	});
 });
 
+describe('用户名跳转用户中心', () => {
+	it('未配置 accountUrl 时用户名是纯文本，不可点击', () => {
+		auth.renderAuth(container, loggedIn('bob'));
+
+		const chip = container.querySelector('.user-chip') as HTMLElement;
+		expect(chip.tagName).toBe('SPAN');
+		expect(chip.getAttribute('href')).toBeNull();
+		expect(container.querySelector('.user-chip-link')).toBeNull();
+		expect(container.querySelector('a')).toBeNull();
+	});
+
+	it('配置 accountUrl 时用户名渲染为指向它的链接', () => {
+		auth.renderAuth(container, status({
+			loggedIn: true,
+			user: { username: 'bob' },
+			accountUrl: 'https://sso.example.test/account',
+		}));
+
+		const chip = container.querySelector('.user-chip') as HTMLAnchorElement;
+		expect(chip.tagName).toBe('A');
+		expect(chip.getAttribute('href')).toBe('https://sso.example.test/account');
+		expect(chip.textContent).toBe('bob');
+		expect(chip.className).toContain('user-chip-link');
+	});
+
+	it('链接带 title 提示，但不覆盖链接的可访问名称', () => {
+		auth.renderAuth(container, status({
+			loggedIn: true,
+			user: { username: 'bob' },
+			accountUrl: 'https://sso.example.test/account',
+		}));
+
+		const chip = container.querySelector('.user-chip') as HTMLAnchorElement;
+		expect(chip.getAttribute('title')).toBe('accountCenter');
+		// aria-label 会覆盖文本，读屏就念不出用户名了
+		expect(chip.getAttribute('aria-label')).toBeNull();
+		expect(chip.textContent).toBe('bob');
+	});
+
+	it('accountUrl 为空串时按未配置处理', () => {
+		auth.renderAuth(container, status({ loggedIn: true, user: { username: 'bob' }, accountUrl: '' }));
+
+		expect(container.querySelector('.user-chip')?.tagName).toBe('SPAN');
+	});
+
+	it('回退为登录按钮时不产生用户中心链接', () => {
+		auth.renderAuth(container, status({ accountUrl: 'https://sso.example.test/account' }));
+
+		expect(container.querySelector('a')).toBeNull();
+		expect(container.textContent).toBe('login');
+	});
+
+	it('登出按钮仍是按钮，点击数不受用户名链接影响', () => {
+		auth.renderAuth(container, status({
+			loggedIn: true,
+			user: { username: 'bob' },
+			accountUrl: 'https://sso.example.test/account',
+		}));
+
+		const buttons = container.querySelectorAll('button');
+		expect(buttons).toHaveLength(1);
+		expect(buttons[0].textContent).toBe('logout');
+	});
+});
+
 describe('登录弹窗', () => {
 	it('点击登录按钮弹出 SSO 提供商按钮', () => {
 		auth.renderAuth(container, status({ providerName: 'Example SSO' }));

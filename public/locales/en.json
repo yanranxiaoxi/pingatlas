@@ -197,6 +197,7 @@
 	"login": "Sign in",
 	"loginFailed": "Sign in failed, please try again.",
 	"ssoLogin": "Sign in with OpenID Connect",
+	"accountCenter": "Account center",
 	"logout": "Sign out",
 	"logoutConfirm": "How would you like to sign out?",
 	"logoutLocal": "Sign out of this service only",

@@ -25,6 +25,8 @@ class Auth extends Controller {
 			authEnabled: enabled,
 			// 未启用登录时不暴露提供商名称；未配置时前端使用本地化默认文案
 			...(enabled && CONFIG.oidc.providerName ? { providerName: CONFIG.oidc.providerName } : {}),
+			// 未配置时前端把用户名渲染为纯文本
+			...(enabled && CONFIG.oidc.accountUrl ? { accountUrl: CONFIG.oidc.accountUrl } : {}),
 			user: user ? { username: user.username } : null,
 		});
 	}

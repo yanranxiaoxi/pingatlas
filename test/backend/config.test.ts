@@ -43,6 +43,7 @@ describe('CONFIG 基线（test/setup/env.ts 提供的环境）', () => {
 		expect(CONFIG.oidc.scope).toBe('openid profile email');
 		expect(CONFIG.oidc.usernameClaim).toBe('preferred_username');
 		expect(CONFIG.oidc.postLogoutRedirectUri).toBe('');
+		expect(CONFIG.oidc.accountUrl).toBe('');
 	});
 
 	it('读取会话配置', () => {
@@ -74,6 +75,7 @@ describe('CONFIG 自定义环境', () => {
 			OIDC_SCOPE: 'openid',
 			OIDC_USERNAME_CLAIM: 'name',
 			OIDC_PROVIDER_NAME: 'Example SSO',
+			OIDC_ACCOUNT_URL: 'https://sso.example.com/realms/main/account',
 			SESSION_SECRET: 'another-secret-abcdefghijkl',
 			SESSION_COOKIE_NAME: 'pa_sid',
 			SESSION_TTL: '60',
@@ -98,6 +100,7 @@ describe('CONFIG 自定义环境', () => {
 			expect(custom.oidc.usernameClaim).toBe('name');
 			expect(custom.oidc.providerName).toBe('Example SSO');
 			expect(custom.oidc.postLogoutRedirectUri).toBe('https://ping.example.com/');
+			expect(custom.oidc.accountUrl).toBe('https://sso.example.com/realms/main/account');
 			expect(custom.session).toMatchObject({ cookieName: 'pa_sid', ttl: 60 });
 			expect(custom.session.secret).toBe('another-secret-abcdefghijkl');
 			expect(custom.staticDir).toBe('./dist/public');
@@ -123,6 +126,57 @@ describe('CONFIG 自定义环境', () => {
 		await jest.isolateModulesAsync(async () => {
 			const { CONFIG: custom } = await importConfig();
 			expect(custom.oidc.postLogoutRedirectUri).toBe('');
+		});
+	});
+
+	it('未配置 OIDC_ACCOUNT_URL 时 accountUrl 为空串', async () => {
+		resetEnv({ OIDC_ACCOUNT_URL: undefined });
+
+		await jest.isolateModulesAsync(async () => {
+			const { CONFIG: custom } = await importConfig();
+			expect(custom.oidc.accountUrl).toBe('');
+		});
+	});
+
+	it('accountUrl 保留原样（不做 URL 归一化，避免给运维意外结果）', async () => {
+		resetEnv({ OIDC_ACCOUNT_URL: 'https://sso.example.com/account?tab=profile#top' });
+
+		await jest.isolateModulesAsync(async () => {
+			const { CONFIG: custom } = await importConfig();
+			expect(custom.oidc.accountUrl).toBe('https://sso.example.com/account?tab=profile#top');
+		});
+	});
+
+	it('accountUrl 也接受 http（本地开发常用）', async () => {
+		resetEnv({ OIDC_ACCOUNT_URL: 'http://localhost:8080/account' });
+
+		await jest.isolateModulesAsync(async () => {
+			const { CONFIG: custom } = await importConfig();
+			expect(custom.oidc.accountUrl).toBe('http://localhost:8080/account');
+		});
+	});
+
+	it('accountUrl 非 http(s) 协议时丢弃（会作为 <a href> 下发，必须堵住 javascript: 等）', async () => {
+		for (const bad of [
+			'javascript:alert(1)',
+			'data:text/html,<script>alert(1)</script>',
+			'ftp://example.com/account',
+			'file:///etc/passwd',
+		]) {
+			resetEnv({ OIDC_ACCOUNT_URL: bad });
+			await jest.isolateModulesAsync(async () => {
+				const { CONFIG: custom } = await importConfig();
+				expect(custom.oidc.accountUrl).toBe('');
+			});
+		}
+	});
+
+	it('accountUrl 畸形时退化为空串', async () => {
+		resetEnv({ OIDC_ACCOUNT_URL: 'not a url' });
+
+		await jest.isolateModulesAsync(async () => {
+			const { CONFIG: custom } = await importConfig();
+			expect(custom.oidc.accountUrl).toBe('');
 		});
 	});
 

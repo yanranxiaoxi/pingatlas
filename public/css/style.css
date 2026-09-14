@@ -203,6 +203,16 @@ pre,
 	white-space: nowrap;
 }
 
+/* 用户名可跳转用户中心（服务端配置了 OIDC_ACCOUNT_URL）时给出可点击的提示 */
+.user-chip-link:hover {
+	text-decoration: underline;
+}
+
+.user-chip-link:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
 /*
  * 顶部栏操作区控件（语言切换 / 主题切换 / 登录登出按钮）的专用视觉规范。
  * 只覆盖 .topbar-actions 内的实例，表单区与结果区的 .btn / .select 不受影响；

@@ -117,6 +117,48 @@ describe('GET /api/auth/status', () => {
 		expect(JSON.parse(res.body)).not.toHaveProperty('providerName');
 	});
 
+	it('配置 OIDC_ACCOUNT_URL 时带出用户中心地址', async () => {
+		const { auth } = await loadModules({ OIDC_ACCOUNT_URL: 'https://sso.example.test/account' });
+		const { ctx, res } = createMockContext({ url: '/api/auth/status' });
+
+		await auth.status(ctx);
+
+		expect(JSON.parse(res.body)).toEqual({
+			loggedIn: false,
+			authEnabled: true,
+			accountUrl: 'https://sso.example.test/account',
+			user: null,
+		});
+	});
+
+	it('未配置用户中心时省略 accountUrl', async () => {
+		const { auth } = await loadModules();
+		const { ctx, res } = createMockContext({ url: '/api/auth/status' });
+
+		await auth.status(ctx);
+
+		expect(JSON.parse(res.body)).not.toHaveProperty('accountUrl');
+	});
+
+	it('未启用登录时不下发 accountUrl', async () => {
+		oidcEnabledValue = false;
+		const { auth } = await loadModules({ OIDC_ACCOUNT_URL: 'https://sso.example.test/account' });
+		const { ctx, res } = createMockContext({ url: '/api/auth/status' });
+
+		await auth.status(ctx);
+
+		expect(JSON.parse(res.body)).not.toHaveProperty('accountUrl');
+	});
+
+	it('accountUrl 非 http(s) 时不下发（避免 javascript: 之类的 href）', async () => {
+		const { auth } = await loadModules({ OIDC_ACCOUNT_URL: 'javascript:alert(1)' });
+		const { ctx, res } = createMockContext({ url: '/api/auth/status' });
+
+		await auth.status(ctx);
+
+		expect(JSON.parse(res.body)).not.toHaveProperty('accountUrl');
+	});
+
 	it('已登录时返回用户名', async () => {
 		oidcEnabledValue = false;
 		const { auth } = await loadModules();

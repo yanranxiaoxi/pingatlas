@@ -83,6 +83,7 @@ PingAtlas 是一个基于 [Globalping](https://globalping.io) 的在线网络测
 | `OIDC_SCOPE` | 否 | `openid profile email` | 请求的 scope |
 | `OIDC_USERNAME_CLAIM` | 否 | `preferred_username` | 用作用户名的 claim（IdP 无此字段时可用 `name` / `sub`） |
 | `OIDC_PROVIDER_NAME` | 否 | 本地化默认值 | 登录弹窗按钮上显示的 SSO 提供商名称 |
+| `OIDC_ACCOUNT_URL` | 否 | — | SSO 用户中心地址；配置后右上角用户名变为指向它的链接（只接受 `http`/`https`） |
 | `OIDC_POST_LOGOUT_REDIRECT_URI` | 否 | `OIDC_REDIRECT_URI` 的站点根 | 「同时退出 SSO」后 IdP 的回跳地址；需在 IdP 登记 |
 | `SESSION_SECRET` | 否* | — | 用于签名会话 Cookie 的 ≥32 位随机串 |
 | `SESSION_COOKIE_NAME` | 否 | `pa_session` | 会话 Cookie 名 |
