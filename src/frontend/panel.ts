@@ -17,7 +17,7 @@ const PANEL_IDS: Record<ResultTab, string> = {
 /**
  * 首次加载默认停留在「测试结果」
  *
- * 与加入标签页之前的行为一致，也避免一进页面就为探针列表多拉 500 KB 数据；
+ * 让结果最先可见，同时避免一进页面就为探针列表多拉 500 KB 数据；
  * 「Probes 列表」在用户真正切过去时才加载。
  */
 const DEFAULT_TAB: ResultTab = 'results';

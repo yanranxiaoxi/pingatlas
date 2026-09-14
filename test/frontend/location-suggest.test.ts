@@ -147,7 +147,7 @@ describe('buildCandidates', () => {
 		expect(cities[0].meta).toBe('🇨🇳 中国台北');
 	});
 
-	it('覆盖只改展示：先前可用的英文名仍作为搜索别名保留', () => {
+	it('覆盖只改展示：英文名仍作为搜索别名保留', () => {
 		const countries = suggest.buildCandidates(makeIndex({ countries: [['TW', 4]] }), 'country');
 		// 与 location-suggest 内部一致地取 Intl 英文名，避免把断言绑死在 ICU 数据上
 		const englishName = new Intl.DisplayNames(['en'], { type: 'region' }).of('TW') ?? '';

@@ -114,7 +114,7 @@ beforeEach(() => {
 	setScrollY(0);
 	stubMatchMedia(true);
 	stubLayout();
-	// rAF 改为同步执行：避免用例依赖帧时序，行为断言仍然有效
+	// 把 rAF 换成同步执行：避免用例依赖帧时序，行为断言仍然有效
 	window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
 		callback(0);
 		return 1;

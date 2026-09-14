@@ -143,6 +143,15 @@ explicit `setPreference()` call during the session outranks that load-time defau
 Probe-count limits: `ANONYMOUS_MAX_PROBES = 50`, `AUTHENTICATED_MAX_PROBES = 500`,
 `UI_DEFAULT_PROBES = 3`; the preset list is `1, 3, 5, 10, 25, 50, 100, 500`.
 
+The two meters sit side by side on small screens (`.quota-meter { flex: 1 1 0 }` with
+`min-width: 0`), each taking half the row. Keeping them on one row matters because the footer is
+`sticky`: whatever height they occupy comes straight out of the content area, and a wrapped pair
+costs roughly 80 px of it. `min-width: 0` is not optional — a flex item's default minimum is
+`min-content`, so without it the longer label (`Shared account quota`) pushes the width back out
+and they wrap anyway. The container keeps `width: 100%` so the two halves actually fill the row,
+and the head is allowed to wrap so a narrow column never breaks a label mid-word. With only one
+meter it takes the full row.
+
 ## Backend API
 
 All `/api/*` responses are raw JSON (no framework `{ success, code, result }` envelope) so upstream
@@ -190,8 +199,8 @@ autocomplete and the probe list only hits the upstream once. The browser keeps i
 - On small screens (`MOBILE_QUERY` in `src/frontend/scroll-chrome.ts`, which must stay in sync with
 the media query that defines the collapse in `public/css/style.css`) the top bar and the footer
 slide out of view while scrolling down and slide back on any upward scroll or near the page top;
-desktop keeps both always visible. Three constraints make this work, and breaking any of them
-reintroduces a bug that is easy to miss:
+desktop keeps both always visible. Three constraints make this work; breaking any of them causes a
+bug that is easy to miss:
   - Collapsing uses `transform` only, never height/`display`: both bars are `sticky`, so they keep
     occupying their space and the document does not reflow (content never jumps)
   - A collapsed bar gets `inert`, otherwise its buttons stay in the focus order while being off
@@ -323,7 +332,7 @@ reintroduces a bug that is easy to miss:
   panel positioning/flipping and every keyboard interaction. jsdom has no global `Response`, so the
   suite injects a minimal stand-in, and `ui` is mocked with deterministic English country names
   because the real `countryName()` depends on the host locale
-- 38 suites / 1007 cases, ~98.4% lines. Remaining uncovered branches are defensive guards that no
+- 38 suites / 1012 cases, ~98.4% lines. Remaining uncovered branches are defensive guards that no
   code path can reach (e.g. `compact()`'s empty-object skip, `buildMeasurementOptions()`'s
   type-guarded `default`, `pollMeasurement()`'s second token check) or need real navigation
   (`window.location.href` assignments, which jsdom cannot perform)

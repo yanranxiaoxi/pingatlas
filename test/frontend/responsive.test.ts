@@ -66,7 +66,7 @@ describe('响应式样式：窄屏表格', () => {
 		expect(narrow).toContain('clip-path: inset(50%);');
 	});
 
-	it('DNS / HTTP 明细表在窄屏改为属性值堆叠', () => {
+	it('DNS / HTTP 明细表在窄屏堆叠为属性值', () => {
 		expect(narrow).toContain('.data-table.dns-answers td.dns-value');
 		expect(narrow).toContain('.data-table.http-headers td.hdr-value');
 		expect(narrow).toContain('.data-table.dns-answers td.dns-meta { display: inline-block;');
@@ -97,12 +97,12 @@ describe('响应式样式：窄屏表格', () => {
 });
 
 /**
- * 回归护栏：窄屏下顶栏与页脚的纵向留白曾被清零
+ * 回归护栏：窄屏下顶栏与页脚必须保留纵向留白
  *
  * `.topbar-inner` 与 `.footer-inner` 同时带有 `container` 类。窄屏断点里那条
- * `.container { padding: 0 12px }` 是简写，加上它位于样式表末尾、特异性又和这两个
- * 选择器相同（都是单个类），于是把它们的 padding-top / padding-bottom 一并清零，
- * 结果是顶栏与页脚的文字直接贴到上下边沿。改为只写横向（padding-inline）后，
+ * `.container` 规则若用简写 `padding`，因为它位于样式表末尾、特异性又和这两个
+ * 选择器相同（都是单个类），会把它们的 padding-top / padding-bottom 一并清零，
+ * 结果是顶栏与页脚的文字直接贴到上下边沿。只写横向（padding-inline）时，
  * 纵向留白由各自的规则决定。
  */
 describe('窄屏：顶栏与页脚的纵向留白', () => {

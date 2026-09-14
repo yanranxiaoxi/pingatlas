@@ -100,16 +100,16 @@ describe('标签栏不是滚动容器', () => {
 	}
 
 	/*
-	 * 回归护栏：这里曾写作 overflow-x: auto（想横向滚动），但按 CSS 规范，
-	 * 一个轴不是 visible 时另一个轴会被计算成 auto，于是 overflow-y 也变成 auto；
-	 * 而 .panel-tab 的 margin-bottom: -1px 让内容比容器高 1px，多出的 1px 就渲染成
-	 * 一条多余的纵向滚动条。三个标签文案很短，用换行即可，不需要任何滚动。
+	 * 这组断言守住一个不直观的约束：标签栏不能声明 overflow-x。
+	 * 按 CSS 规范，一个轴不是 visible 时另一个轴会被计算成 auto，于是 overflow-y
+	 * 也变成 auto；而 .panel-tab 的 margin-bottom: -1px 让内容比容器高 1px，多出的
+	 * 1px 就会渲染成一条多余的纵向滚动条。三个标签文案很短，用换行即可，不需要滚动。
 	 */
 	it('不声明任何 overflow（否则另一轴会被计算成 auto）', () => {
 		expect(tabsBlock()).not.toContain('overflow');
 	});
 
-	it('改为允许换行，窄屏下折行而不滚动', () => {
+	it('允许换行，窄屏下折行而不滚动', () => {
 		expect(tabsBlock()).toContain('flex-wrap: wrap;');
 	});
 
@@ -127,7 +127,7 @@ describe('探针列表样式', () => {
 	it('面板不做内部滚动：整页共用一条滚动条', () => {
 		// 探针列表最多 160 行，限高会产生「整页 + 面板」双层滚动
 		expect(flatCss).not.toContain('.probe-pane {');
-		// 表单面板也不再是 sticky + max-height + overflow-y
+		// 表单面板不 sticky、不限高、也无内部滚动
 		expect(flatCss).not.toContain('.form-panel {');
 		const pane = flatCss.slice(flatCss.indexOf('.panel-pane[hidden] {'));
 		expect(pane.slice(0, 300)).not.toContain('overflow-y');

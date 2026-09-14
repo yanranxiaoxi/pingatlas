@@ -1243,7 +1243,7 @@ textarea.input:focus {
 }
 
 /*
- * 原始输出：高度由内容决定，不再限高。长行仍需横向滚动（相当于代码块），
+ * 原始输出：高度由内容决定，不设上限。长行仍需横向滚动（相当于代码块），
  * 只保留 overflow-x 即可——高度不受限时不会出现纵向滚动条。
  */
 .raw-text {
@@ -1697,7 +1697,7 @@ body.modal-open {
 		flex: 1 1 auto;
 	}
 
-	/* 键值列表：值可换行，长内容不再撑破卡片 */
+	/* 键值列表：值可换行，长内容不会撑破卡片 */
 	.kv.kv-inline {
 		grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
 		gap: 6px 10px;
@@ -1707,9 +1707,30 @@ body.modal-open {
 		overflow-wrap: anywhere;
 	}
 
-	.quota-meter,
+	/*
+	 * 两条额度条在小屏并排（一左一右），各占一半宽度。
+	 *
+	 * 容器保持整行宽度，两条各自 flex: 1 1 0 平分；min-width: 0 是必需的，
+	 * 否则 flex 项的最小尺寸默认是 min-content，长文案（如英文的
+	 * Shared account quota）会把宽度顶开，两条就折成两行。
+	 */
 	.quota-meters {
 		width: 100%;
+		gap: 8px;
+	}
+
+	.quota-meter {
+		flex: 1 1 0;
+		min-width: 0;
+		width: auto;
+		/* 列变窄后收紧内边距，把宽度让给文案与进度条 */
+		padding: 7px 8px;
+	}
+
+	/* 窄列里标签与数值可能同行放不下：允许换行，避免把标签从词中间挤断 */
+	.quota-meter-head {
+		flex-wrap: wrap;
+		gap: 2px 6px;
 	}
 
 	/* 页脚的 10px 上下留白由基础规则提供，这里只收窄列间距 */
@@ -1725,7 +1746,7 @@ body.modal-open {
 		display: none;
 	}
 
-	/* ===== 窄屏表格：隐藏表头，单元格改为卡片式堆叠 ===== */
+	/* ===== 窄屏表格：隐藏表头，单元格堆叠为卡片 ===== */
 	.data-table {
 		display: block;
 		font-size: 0.78rem;
@@ -1854,7 +1875,7 @@ body.modal-open {
  * 由 `src/frontend/scroll-chrome.ts` 给对应区域加 `.chrome-hidden`；断点必须与该模块
  * 导出的 MOBILE_QUERY 一致。
  *
- * 用 transform 而不是高度或 display：两个区域都是 sticky，仍然占据原本的空间，
+ * 用 transform 而不是高度或 display：两个区域都是 sticky，仍然占据布局中自身的空间，
  * 页面不会重排，正文也不会跳动。
  */
 @media (max-width: 620px) {

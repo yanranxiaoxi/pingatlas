@@ -206,7 +206,7 @@ describe('Probes 列表', () => {
 		expect(cells[3]).toBe('datacenter-network');
 	});
 
-	it('次区域与大洲不占列，改为位置单元格的悬浮提示', async () => {
+	it('次区域与大洲不占列，放在位置单元格的悬浮提示里', async () => {
 		const { panel } = await boot();
 		panel.setActiveTab('probes');
 		await flush();

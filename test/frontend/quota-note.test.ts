@@ -35,6 +35,63 @@ describe('额度条副标题排版', () => {
 	});
 });
 
+/**
+ * 小屏并列布局
+ *
+ * 两条额度条平分一行。页脚是 sticky 的，它们占的高度直接从内容区里扣，
+ * 因此不能让每条各占一整行。
+ */
+describe('额度条小屏并列', () => {
+	/** 取出 `@media (max-width: 620px)` 的规则体（已折叠空白） */
+	function narrowBlock(): string {
+		const at = css.indexOf('@media (max-width: 620px) {');
+		expect(at).toBeGreaterThan(-1);
+		let depth = 0;
+		let start = -1;
+		for (let i = css.indexOf('{', at); i < css.length; i += 1) {
+			if (css[i] === '{') {
+				if (depth === 0)
+					start = i + 1;
+				depth += 1;
+			}
+			else if (css[i] === '}') {
+				depth -= 1;
+				if (depth === 0)
+					return css.slice(start, i);
+			}
+		}
+		throw new Error('样式表花括号不配对');
+	}
+
+	it('额度条平分一行，而不是各自占满宽度', () => {
+		const narrow = narrowBlock();
+
+		expect(narrow).toContain('.quota-meter { flex: 1 1 0;');
+		// 简写 width 会覆盖 flex-basis，必须显式写回 auto
+		expect(narrow).toContain('width: auto;');
+		// 每条占满整行的写法会让两条各占一行
+		expect(narrow).not.toMatch(/\.quota-meter, \.quota-meters \{ width: 100%; \}/);
+	});
+
+	it('容器占满宽度，两条才能正好铺满一行', () => {
+		// 容器若收缩到内容宽度，两条的一半就只有半个页脚宽
+		expect(narrowBlock()).toContain('.quota-meters { width: 100%;');
+	});
+
+	it('允许收缩到内容宽度以下，否则长标签会把宽度顶开又变回两行', () => {
+		// flex 项默认最小尺寸是 min-content，英文标签更长，必须显式归零
+		expect(narrowBlock()).toContain('min-width: 0;');
+	});
+
+	it('窄列里表头允许换行，避免把标签从词中间挤断', () => {
+		expect(narrowBlock()).toContain('.quota-meter-head { flex-wrap: wrap;');
+	});
+
+	it('缩小内边距，把宽度让给文案与进度条', () => {
+		expect(narrowBlock()).toContain('padding: 7px 8px;');
+	});
+});
+
 describe('额度条副标题文案', () => {
 	const keys = ['quotaModeDirect', 'quotaModeProxy'];
 
@@ -54,7 +111,7 @@ describe('额度条副标题文案', () => {
 		}
 	});
 
-	it('额度条不再使用整句形式的说明文案', () => {
+	it('额度条使用简短模式标签，而不是整句说明', () => {
 		expect(zh.quotaModeDirect).not.toBe(zh.viaDirect);
 		expect(en.quotaModeDirect).not.toBe(en.viaDirect);
 		expect(zh.quotaModeProxy).not.toBe(zh.viaProxy);
