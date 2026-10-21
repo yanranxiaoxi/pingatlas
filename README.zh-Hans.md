@@ -163,15 +163,28 @@ pnpm typecheck       # tsc --noEmit
 
 ## Docker
 
+已发布镜像：[`docker.io/yanranxiaoxi/pingatlas`](https://hub.docker.com/r/yanranxiaoxi/pingatlas)（`latest` 跟随默认分支）。
+
 ```bash
+docker run -d --name pingatlas \
+  -p 3001:3001 \
+  -e GP_TOKEN='…' \
+  -e SESSION_SECRET='…' \
+  docker.io/yanranxiaoxi/pingatlas:latest
+```
+
+如需本地构建，再运行自己打的标签：
+
+```bash
+pnpm build
 docker build -t pingatlas .
-docker run -p 3001:3001 \
+docker run -d --name pingatlas -p 3001:3001 \
   -e GP_TOKEN='…' \
   -e SESSION_SECRET='…' \
   pingatlas
 ```
 
-镜像内执行 `pnpm install --prod` 并复制 `dist/`（后端 + `public/`）。
+镜像同时发布在 GitLab 私有仓库：`registry.gitlab.soraharu.com/xiaoxi/pingatlas:latest`。镜像内执行 `pnpm install --prod` 并复制 `dist/`（后端 + `public/`）。
 
 ## 限制
 

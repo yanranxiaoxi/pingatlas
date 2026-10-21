@@ -164,15 +164,28 @@ The service worker maintains a versioned app-shell cache and prefers the network
 
 ## Docker
 
+Published image: [`docker.io/yanranxiaoxi/pingatlas`](https://hub.docker.com/r/yanranxiaoxi/pingatlas) (`latest` follows the default branch).
+
 ```bash
+docker run -d --name pingatlas \
+  -p 3001:3001 \
+  -e GP_TOKEN='…' \
+  -e SESSION_SECRET='…' \
+  docker.io/yanranxiaoxi/pingatlas:latest
+```
+
+To build locally instead, then run your own tag:
+
+```bash
+pnpm build
 docker build -t pingatlas .
-docker run -p 3001:3001 \
+docker run -d --name pingatlas -p 3001:3001 \
   -e GP_TOKEN='…' \
   -e SESSION_SECRET='…' \
   pingatlas
 ```
 
-The image runs `pnpm install --prod` and copies `dist/` (backend + `public/`).
+The image is also available from the GitLab registry as `registry.gitlab.soraharu.com/xiaoxi/pingatlas:latest`. It runs `pnpm install --prod` and copies `dist/` (backend + `public/`).
 
 ## Limitations
 
