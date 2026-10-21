@@ -380,10 +380,26 @@ textarea.input:focus {
 	color: var(--text);
 	font-size: 1rem;
 	line-height: 1;
+	/* 也用于 <a>（GitHub 入口）：链接不显示下划线 */
+	text-decoration: none;
 }
 
 .icon-btn:hover {
 	border-color: var(--accent);
+	text-decoration: none;
+}
+
+.icon-btn:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+/* 图标按钮内的 SVG：固定尺寸并跟随按钮文字颜色 */
+.icon-btn svg {
+	width: 18px;
+	height: 18px;
+	display: block;
+	fill: currentColor;
 }
 
 /* ===== 布局 ===== */

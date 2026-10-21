@@ -3,7 +3,6 @@
 	"themeToggle": "切换颜色主题",
 	"themeToLight": "切换到浅色主题",
 	"themeToDark": "切换到深色主题",
-
 	"target": "测试目标",
 	"targetPlaceholder": "example.com、1.1.1.1 或 https://example.com",
 	"type": "测量类型",
@@ -20,7 +19,6 @@
 	"timeout": "超时时间",
 	"submit": "开始测试",
 	"reset": "重置",
-
 	"locationSection": "节点位置筛选",
 	"locMagic": "Magic 匹配",
 	"locMagicPlaceholder": "Germany / AS13335 / Europe / aws-us-east-1 / Google",
@@ -52,7 +50,6 @@
 	"suggestKindNetwork": "网络",
 	"suggestKindRegion": "地区",
 	"suggestKindTag": "标签",
-
 	"optionsSection": "测量参数",
 	"optDefault": "默认",
 	"optAny": "不限",
@@ -72,7 +69,6 @@
 	"httpQueryPlaceholder": "foo=bar",
 	"httpHeaders": "请求头",
 	"httpHeadersPlaceholder": "Accept: */*\nUser-Agent: PingAtlas",
-
 	"resultsPlaceholder": "填写测试目标后点击「开始测试」，即可从全球节点发起测量。",
 	"resultsRunning": "测量已提交，正在等待节点返回结果…",
 	"resultsError": "测量失败",
@@ -87,7 +83,6 @@
 	"copied": "已复制到剪贴板",
 	"copyFailed": "复制失败，请手动复制",
 	"rawOutput": "原始输出",
-
 	"statusFinished": "已完成",
 	"statusInProgress": "进行中",
 	"statusFailed": "失败",
@@ -95,7 +90,6 @@
 	"resultPending": "该节点尚未返回结果。",
 	"resultOffline": "该节点在返回结果前已离线。",
 	"resultFailed": "该节点无法完成本次测量。",
-
 	"statMin": "最小",
 	"statAvg": "平均",
 	"statMax": "最大",
@@ -105,12 +99,10 @@
 	"hopsUnit": "跳",
 	"resolvedAddress": "解析地址",
 	"resolvedHostname": "反向解析",
-
 	"hopAddress": "地址",
 	"hopHostname": "主机名",
 	"hopLoss": "丢包率",
 	"hopRtt": "RTT",
-
 	"dnsName": "名称",
 	"dnsType": "类型",
 	"dnsTtl": "TTL",
@@ -118,7 +110,6 @@
 	"dnsValue": "记录值",
 	"dnsStatusCode": "状态码",
 	"dnsAnswers": "应答记录",
-
 	"httpStatus": "状态码",
 	"httpTimings": "各阶段耗时",
 	"timingTotal": "总计",
@@ -139,7 +130,6 @@
 	"httpResponseHeaders": "响应头",
 	"httpBody": "响应正文",
 	"httpBodyTruncated": "正文已被 API 截断，此处仅显示前面部分。",
-
 	"quotaLocalLabel": "本机额度",
 	"quotaProxyLabel": "公共账号额度",
 	"quotaLoading": "载入中…",
@@ -164,7 +154,6 @@
 	"viaDirect": "当前使用本机额度，请求直接发往 globalping.io。",
 	"viaProxy": "当前通过服务端代理使用公共账号额度。",
 	"fallbackToProxy": "已自动降级为公共账号额度。",
-
 	"resultPanelLabel": "结果面板",
 	"tabProbes": "Probes 列表",
 	"tabMatched": "匹配 Probes 列表",
@@ -182,7 +171,6 @@
 	"probeFromBroadFilter": "来自更宽泛的筛选",
 	"probeListUnavailable": "探针列表暂时不可用，请稍后重试。",
 	"probeMatchEmpty": "没有探针符合当前筛选条件，请放宽条件后重试。",
-
 	"targetRequired": "请填写测试目标。",
 	"networkError": "网络错误，请重试。",
 	"errorNoProbesFound": "没有找到符合条件的可用探测节点。请放宽位置筛选条件或稍后重试。",
@@ -203,5 +191,6 @@
 	"logoutLocal": "仅退出当前服务",
 	"logoutSso": "同时退出 SSO 系统",
 	"footerCredit": "[小汐](https://soraharu.com/) 为 Globalping 的 [User Leader](https://globalping.io/leaderboard)，持续为项目贡献 [探针节点](https://globalping.io/users/yanranxiaoxi)。",
-	"footerNote": "测量数据由 Globalping（api.globalping.io）提供，PingAtlas 不存储任何探测数据、也不自行执行测量。"
+	"footerNote": "测量数据由 Globalping（api.globalping.io）提供，PingAtlas 不存储任何探测数据、也不自行执行测量。",
+	"githubLink": "在 GitHub 上查看源码"
 }

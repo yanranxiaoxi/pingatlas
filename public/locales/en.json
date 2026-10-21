@@ -3,7 +3,6 @@
 	"themeToggle": "Toggle color scheme",
 	"themeToLight": "Switch to light theme",
 	"themeToDark": "Switch to dark theme",
-
 	"target": "Target",
 	"targetPlaceholder": "example.com, 1.1.1.1 or https://example.com",
 	"type": "Measurement type",
@@ -20,7 +19,6 @@
 	"timeout": "Timeout",
 	"submit": "Run test",
 	"reset": "Reset",
-
 	"locationSection": "Location filters",
 	"locMagic": "Magic",
 	"locMagicPlaceholder": "Germany / AS13335 / Europe / aws-us-east-1 / Google",
@@ -52,7 +50,6 @@
 	"suggestKindNetwork": "Network",
 	"suggestKindRegion": "Region",
 	"suggestKindTag": "Tag",
-
 	"optionsSection": "Measurement options",
 	"optDefault": "Default",
 	"optAny": "Any",
@@ -72,7 +69,6 @@
 	"httpQueryPlaceholder": "foo=bar",
 	"httpHeaders": "Request headers",
 	"httpHeadersPlaceholder": "Accept: */*\nUser-Agent: PingAtlas",
-
 	"resultsPlaceholder": "Enter a target and press \"Run test\" to measure from probes around the world.",
 	"resultsRunning": "Measurement dispatched, waiting for probes…",
 	"resultsError": "Measurement failed",
@@ -87,7 +83,6 @@
 	"copied": "Copied to clipboard",
 	"copyFailed": "Copy failed, please copy manually",
 	"rawOutput": "Raw output",
-
 	"statusFinished": "finished",
 	"statusInProgress": "in progress",
 	"statusFailed": "failed",
@@ -95,7 +90,6 @@
 	"resultPending": "This probe has not returned a result yet.",
 	"resultOffline": "This probe went offline before returning a result.",
 	"resultFailed": "This probe could not run the measurement.",
-
 	"statMin": "Min",
 	"statAvg": "Avg",
 	"statMax": "Max",
@@ -105,12 +99,10 @@
 	"hopsUnit": "hops",
 	"resolvedAddress": "Resolved address",
 	"resolvedHostname": "Reverse DNS",
-
 	"hopAddress": "Address",
 	"hopHostname": "Hostname",
 	"hopLoss": "Loss",
 	"hopRtt": "RTT",
-
 	"dnsName": "Name",
 	"dnsType": "Type",
 	"dnsTtl": "TTL",
@@ -118,7 +110,6 @@
 	"dnsValue": "Value",
 	"dnsStatusCode": "Status",
 	"dnsAnswers": "Answers",
-
 	"httpStatus": "Status",
 	"httpTimings": "Timings",
 	"timingTotal": "Total",
@@ -139,7 +130,6 @@
 	"httpResponseHeaders": "Response headers",
 	"httpBody": "Body",
 	"httpBodyTruncated": "The API truncated the body; only the first part is shown.",
-
 	"quotaLocalLabel": "Your quota",
 	"quotaProxyLabel": "Shared account quota",
 	"quotaLoading": "loading…",
@@ -164,7 +154,6 @@
 	"viaDirect": "Using your own quota, requests go straight to globalping.io.",
 	"viaProxy": "Using the shared account quota through the server-side proxy.",
 	"fallbackToProxy": "Falling back to the shared account quota.",
-
 	"resultPanelLabel": "Result panel",
 	"tabProbes": "Probes list",
 	"tabMatched": "Matched probes",
@@ -182,7 +171,6 @@
 	"probeFromBroadFilter": "from a broader filter",
 	"probeListUnavailable": "The probe list is unavailable right now. Please try again later.",
 	"probeMatchEmpty": "No probe matches the current filters. Loosen them and try again.",
-
 	"targetRequired": "Please enter a target.",
 	"networkError": "Network error, please try again.",
 	"errorNoProbesFound": "No matching probes are available. Loosen the location filters or try again later.",
@@ -203,5 +191,6 @@
 	"logoutLocal": "Sign out of this service only",
 	"logoutSso": "Also sign out of SSO",
 	"footerCredit": "[XiaoXi](https://soraharu.com/) is a Globalping [User Leader](https://globalping.io/leaderboard) and keeps contributing [probe nodes](https://globalping.io/users/yanranxiaoxi) to the project.",
-	"footerNote": "Measurement data is provided by Globalping (api.globalping.io). PingAtlas stores no probe data and does not run measurements itself."
+	"footerNote": "Measurement data is provided by Globalping (api.globalping.io). PingAtlas stores no probe data and does not run measurements itself.",
+	"githubLink": "View source on GitHub"
 }
