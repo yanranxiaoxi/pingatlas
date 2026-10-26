@@ -4,13 +4,13 @@
  * 策略：同源 GET 网络优先 + 缓存兜底，离线时可打开应用外壳。
  * 跨域直连 globalping.io 与同源 /api/* 一律不缓存（测量结果必须实时）。
  * 升级时修改 CACHE_VERSION 即可全量刷新缓存。 */
-const CACHE_VERSION = 'pa-shell-v1';
+const CACHE_VERSION = 'pa-shell-v2';
 const CACHE_NAME = CACHE_VERSION;
 
 const PRECACHE_URLS = [
 	'/index.html',
 	'/css/style.css',
-	'/assets/main-SBLDAZT5.js',
+	'/assets/main-ULQF74ZR.js',
 	'/manifest.webmanifest',
 	'/favicon.svg',
 	'/locales/en.json',

@@ -205,6 +205,7 @@ function registerServiceWorker(): void {
 }
 
 async function main(): Promise<void> {
+	// 先应用主题：不依赖语言包，避免等待网络与首屏闪白
 	initTheme();
 	await initI18n();
 	applyI18n();

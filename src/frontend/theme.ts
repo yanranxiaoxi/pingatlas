@@ -29,9 +29,14 @@ export function getPreferredTheme(): Theme {
 	return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-/** 应用主题到 `<html data-theme>` 并同步 PWA 的 theme-color */
+/** 应用主题到 `<html data-theme>`，并同步 color-scheme 与 PWA 的 theme-color */
 export function applyTheme(theme: Theme): void {
 	document.documentElement.setAttribute('data-theme', theme);
+	// color-scheme 同时驱动浏览器原生控件配色与暗色主题检测（如 Dark Reader）
+	const scheme = document.querySelector('meta[name="color-scheme"]');
+	if (scheme) {
+		scheme.setAttribute('content', theme);
+	}
 	const meta = document.querySelector('meta[name="theme-color"]');
 	if (meta) {
 		meta.setAttribute('content', theme === 'dark' ? '#0e1116' : '#ffffff');
