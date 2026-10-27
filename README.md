@@ -86,12 +86,12 @@ Browser ── local quota left ────────► {GP_API_URL}/v1/meas
 | `OIDC_PROVIDER_NAME` | no | localized default | SSO provider name shown on the login dialog button |
 | `OIDC_ACCOUNT_URL` | no | — | SSO account centre URL; when set, the user name in the top bar becomes a link to it (`http`/`https` only) |
 | `OIDC_POST_LOGOUT_REDIRECT_URI` | no | site root of `OIDC_REDIRECT_URI` | Where the IdP returns after "also sign out of SSO"; register it at the IdP |
-| `SESSION_SECRET` | no* | — | ≥32 random chars used to sign the session cookie |
+| `SESSION_SECRET` | no* | — | Required when login is enabled; at least 32 bytes. A non-empty but shorter value always aborts startup |
 | `SESSION_COOKIE_NAME` | no | `pa_session` | Session cookie name |
 | `SESSION_TTL` | no | `604800` | Session lifetime in seconds |
 | `STATIC_DIR` | no | auto | Static directory (auto resolves: `dist/public` in prod, `public` in dev) |
 
-\* Sign-in is disabled unless all OIDC fields **and** `SESSION_SECRET` are set — the sign-in button is then hidden, and with it the whole proxy path.
+\* Sign-in is disabled unless all OIDC fields **and** `SESSION_SECRET` are set — the sign-in button is then hidden, and with it the whole proxy path. Without login the secret may be omitted.
 
 Other inherited server variables: `SERVER_HOST`, `SERVER_PORT` (default `80`; the Docker image sets `3001`), `LOG_LEVEL`, `PROJECT_NAME`, `SERVER_NAME`, `ENV_PRODUCT`.
 
@@ -111,7 +111,7 @@ SESSION_SECRET='…' \
 node dist/index.js
 ```
 
-Open http://localhost:80 (or `SERVER_PORT`) once the service has started. No configuration is required to run measurements: the browser calls the public Globalping API directly, and `GP_TOKEN` enables only the signed-in fallback path.
+Open http://localhost:80 (or `SERVER_PORT`) once the service has started. No configuration is required to run measurements: the browser calls the public Globalping API directly, and `GP_TOKEN` enables only the signed-in fallback path. Add the OIDC fields plus a ≥32-byte `SESSION_SECRET` to enable login.
 
 ## Testing
 

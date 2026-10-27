@@ -18,7 +18,11 @@ export interface SessionPayload extends SessionUser {
 const encoder = new TextEncoder();
 
 /**
- * 校验会话是否可用（已配置签名密钥）
+ * 会话是否可用
+ *
+ * `SESSION_SECRET` 在配置加载时已强制校验（必填且不少于 32 字节），
+ * 因此服务启动后本判断恒为真；保留它是为了让签发/校验路径在配置被
+ * 绕过时仍然 fail closed。
  */
 export function sessionEnabled(): boolean {
 	return CONFIG.session.secret.length > 0;

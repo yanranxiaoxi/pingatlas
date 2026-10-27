@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -35,6 +36,36 @@ function validatePort(port: string | undefined, defaultPort: number): number {
 
 function validateOptionalEnvVar(name: string, value: string | undefined, defaultValue = ''): string {
 	return value || defaultValue;
+}
+
+/** 会话签名密钥的最小字节数：HS256 的强度下限，远高于任何可爆破的口令 */
+const MIN_SESSION_SECRET_BYTES = 32;
+
+/** OIDC 是否已完整配置：与 service/oidc.ts 的 oidcEnabled() 判定保持一致 */
+const oidcConfigured = Boolean(
+	process.env.OIDC_ISSUER && process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET && process.env.OIDC_REDIRECT_URI,
+);
+
+/**
+ * 验证会话签名密钥
+ *
+ * 只有启用登录时才需要它：会话是纯 HS256 的 JWT，没有任何其他绑定，
+ * 密钥是防伪造的唯一屏障，因此启用登录时必须存在且不少于 32 字节。
+ * 未启用登录时会话无处签发，允许留空；但一旦填了值就仍然校验长度，
+ * 避免留下一个将来开启登录就会失效的弱密钥。
+ */
+function validateSessionSecret(value: string | undefined): string {
+	if (!value) {
+		if (oidcConfigured) {
+			throw new Error('Required environment variable SESSION_SECRET is not set (login is enabled)');
+		}
+		return '';
+	}
+	const bytes = Buffer.byteLength(value, 'utf8');
+	if (bytes < MIN_SESSION_SECRET_BYTES) {
+		throw new Error(`Invalid environment variable SESSION_SECRET: at least ${MIN_SESSION_SECRET_BYTES} bytes required, got ${bytes}`);
+	}
+	return value;
 }
 
 function validateNumberEnvVar(name: string, value: string | undefined, defaultValue: number): number {
@@ -135,8 +166,8 @@ export const CONFIG = {
 
 	/** 会话配置 */
 	session: {
-		/** 会话签名密钥（必填，建议 32+ 随机字节） */
-		secret: validateOptionalEnvVar('SESSION_SECRET', process.env.SESSION_SECRET),
+		/** 会话签名密钥：启用登录时必填且至少 32 字节；未启用登录可留空 */
+		secret: validateSessionSecret(process.env.SESSION_SECRET),
 		cookieName: validateOptionalEnvVar('SESSION_COOKIE_NAME', process.env.SESSION_COOKIE_NAME, 'pa_session'),
 		ttl: validateNumberEnvVar('SESSION_TTL', process.env.SESSION_TTL, 7 * 24 * 60 * 60),
 	},

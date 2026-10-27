@@ -5,6 +5,14 @@ import { CONFIG, resolveStaticDir } from '../../src/config/config';
 import { resetEnv } from '../helpers/env';
 import { projectRoot } from '../helpers/paths';
 
+/** 一套完整可用的 OIDC 配置，用于验证「启用登录后 SESSION_SECRET 变为必填」 */
+const OIDC_ENV = {
+	OIDC_ISSUER: 'https://idp.example.com/realms/main',
+	OIDC_CLIENT_ID: 'pingatlas',
+	OIDC_CLIENT_SECRET: 'secret',
+	OIDC_REDIRECT_URI: 'https://ping.example.com/api/auth/callback',
+};
+
 beforeEach(() => resetEnv());
 afterAll(() => resetEnv());
 
@@ -76,7 +84,7 @@ describe('CONFIG 自定义环境', () => {
 			OIDC_USERNAME_CLAIM: 'name',
 			OIDC_PROVIDER_NAME: 'Example SSO',
 			OIDC_ACCOUNT_URL: 'https://sso.example.com/realms/main/account',
-			SESSION_SECRET: 'another-secret-abcdefghijkl',
+			SESSION_SECRET: 'another-secret-abcdefghijklmnopqrstuv',
 			SESSION_COOKIE_NAME: 'pa_sid',
 			SESSION_TTL: '60',
 			STATIC_DIR: './dist/public',
@@ -102,7 +110,7 @@ describe('CONFIG 自定义环境', () => {
 			expect(custom.oidc.postLogoutRedirectUri).toBe('https://ping.example.com/');
 			expect(custom.oidc.accountUrl).toBe('https://sso.example.com/realms/main/account');
 			expect(custom.session).toMatchObject({ cookieName: 'pa_sid', ttl: 60 });
-			expect(custom.session.secret).toBe('another-secret-abcdefghijkl');
+			expect(custom.session.secret).toBe('another-secret-abcdefghijklmnopqrstuv');
 			expect(custom.staticDir).toBe('./dist/public');
 			expect(resolve()).toBe(path.resolve('./dist/public'));
 		});
@@ -248,6 +256,34 @@ describe('CONFIG 非法环境', () => {
 	it('SESSION_TTL 非法时抛错', async () => {
 		await expectConfigFailure({ SESSION_TTL: '-5' }, 'Invalid environment variable SESSION_TTL: -5');
 		await expectConfigFailure({ SESSION_TTL: 'nope' }, 'Invalid environment variable SESSION_TTL: nope');
+	});
+
+	it('启用登录但 SESSION_SECRET 缺失时抛错', async () => {
+		await expectConfigFailure({ SESSION_SECRET: '', ...OIDC_ENV }, 'Required environment variable SESSION_SECRET is not set');
+	});
+
+	it('未启用登录时 SESSION_SECRET 可以缺失，此时会话关闭', async () => {
+		resetEnv({ SESSION_SECRET: '' });
+		await jest.isolateModulesAsync(async () => {
+			const { CONFIG: custom } = await importConfig();
+			expect(custom.session.secret).toBe('');
+		});
+	});
+
+	it('SESSION_SECRET 少于 32 字节时抛错（无论是否启用登录）', async () => {
+		await expectConfigFailure({ SESSION_SECRET: 'too-short' }, 'at least 32 bytes required');
+		// 31 字节仍然不足
+		await expectConfigFailure({ SESSION_SECRET: 'a'.repeat(31) }, 'at least 32 bytes required');
+		// 启用登录时同样拒绝
+		await expectConfigFailure({ SESSION_SECRET: 'a'.repeat(31), ...OIDC_ENV }, 'at least 32 bytes required');
+	});
+
+	it('SESSION_SECRET 恰好 32 字节时接受', async () => {
+		resetEnv({ SESSION_SECRET: 'a'.repeat(32) });
+		await jest.isolateModulesAsync(async () => {
+			const { CONFIG: custom } = await importConfig();
+			expect(custom.session.secret).toBe('a'.repeat(32));
+		});
 	});
 
 	it('带默认值的变量被置空时回落到默认值（不抛错）', async () => {

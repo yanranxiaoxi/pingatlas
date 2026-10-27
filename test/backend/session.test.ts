@@ -9,6 +9,14 @@ import {
 } from '../../src/utils/session';
 import { resetEnv, TEST_SESSION_SECRET } from '../helpers/env';
 
+/** 一套完整可用的 OIDC 配置，用于验证「启用登录后 SESSION_SECRET 变为必填」 */
+const OIDC_ENV = {
+	OIDC_ISSUER: 'https://idp.example.com/realms/main',
+	OIDC_CLIENT_ID: 'pingatlas',
+	OIDC_CLIENT_SECRET: 'secret',
+	OIDC_REDIRECT_URI: 'https://ping.example.com/api/auth/callback',
+};
+
 const user: SessionUser = { sub: 'user-1', username: 'alice' };
 
 afterAll(() => resetEnv());
@@ -18,11 +26,25 @@ describe('sessionEnabled', () => {
 		expect(sessionEnabled()).toBe(true);
 	});
 
-	it('SESSION_SECRET 为空时为 false', async () => {
+	it('未启用登录且 SESSION_SECRET 为空时为 false', async () => {
 		resetEnv({ SESSION_SECRET: '' });
 		await jest.isolateModulesAsync(async () => {
 			const mod = await import('../../src/utils/session');
 			expect(mod.sessionEnabled()).toBe(false);
+		});
+	});
+
+	it('启用登录但 SESSION_SECRET 为空时配置层直接拒绝加载', async () => {
+		resetEnv({ SESSION_SECRET: '', ...OIDC_ENV });
+		await jest.isolateModulesAsync(async () => {
+			await expect(import('../../src/utils/session')).rejects.toThrow('Required environment variable SESSION_SECRET is not set');
+		});
+	});
+
+	it('SESSION_SECRET 少于 32 字节时配置层直接拒绝加载（无论是否启用登录）', async () => {
+		resetEnv({ SESSION_SECRET: 'too-short' });
+		await jest.isolateModulesAsync(async () => {
+			await expect(import('../../src/utils/session')).rejects.toThrow('at least 32 bytes required');
 		});
 	});
 });
@@ -111,7 +133,7 @@ describe('signSession / verifySession', () => {
 		await expect(verifySession(token)).resolves.toBeNull();
 	});
 
-	it('未配置 SESSION_SECRET 时签发抛错', async () => {
+	it('未启用登录且未配置 SESSION_SECRET 时签发抛错', async () => {
 		resetEnv({ SESSION_SECRET: '' });
 		await jest.isolateModulesAsync(async () => {
 			const mod = await import('../../src/utils/session');

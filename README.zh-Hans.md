@@ -85,12 +85,12 @@ PingAtlas 是一个基于 [Globalping](https://globalping.io) 的在线网络测
 | `OIDC_PROVIDER_NAME` | 否 | 本地化默认值 | 登录弹窗按钮上显示的 SSO 提供商名称 |
 | `OIDC_ACCOUNT_URL` | 否 | — | SSO 用户中心地址；配置后右上角用户名变为指向它的链接（只接受 `http`/`https`） |
 | `OIDC_POST_LOGOUT_REDIRECT_URI` | 否 | `OIDC_REDIRECT_URI` 的站点根 | 「同时退出 SSO」后 IdP 的回跳地址；需在 IdP 登记 |
-| `SESSION_SECRET` | 否* | — | 用于签名会话 Cookie 的 ≥32 位随机串 |
+| `SESSION_SECRET` | 否* | — | 启用登录时必填，至少 32 字节；填了值就一定校验长度，不足则启动失败 |
 | `SESSION_COOKIE_NAME` | 否 | `pa_session` | 会话 Cookie 名 |
 | `SESSION_TTL` | 否 | `604800` | 会话有效期（秒） |
 | `STATIC_DIR` | 否 | 自动 | 静态目录（生产 `dist/public`、开发 `public`，留空自动解析） |
 
-\* 只有在 **OIDC 四项齐全且设置了 `SESSION_SECRET`** 时才会启用登录 —— 否则登录入口与整条代理通道都会被隐藏。
+\* 只有在 **OIDC 四项齐全且设置了 `SESSION_SECRET`** 时才会启用登录 —— 否则登录入口与整条代理通道都会被隐藏。未启用登录时可以不填。
 
 其他继承自框架的服务端变量：`SERVER_HOST`、`SERVER_PORT`（默认 `80`，Docker 镜像内为 `3001`）、`LOG_LEVEL`、`PROJECT_NAME`、`SERVER_NAME`、`ENV_PRODUCT`。
 
@@ -110,7 +110,7 @@ SESSION_SECRET='…' \
 node dist/index.js
 ```
 
-启动后访问 http://localhost:80 （或 `SERVER_PORT`）。执行测量本身无需任何配置：浏览器直接访问公开的 Globalping API，`GP_TOKEN` 仅用于启用登录后的兜底通道。
+启动后访问 http://localhost:80 （或 `SERVER_PORT`）。执行测量本身无需任何配置：浏览器直接访问公开的 Globalping API，`GP_TOKEN` 仅用于启用登录后的兜底通道。需要登录时再补上 OIDC 四项与至少 32 字节的 `SESSION_SECRET`。
 
 ## 测试
 
