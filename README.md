@@ -162,6 +162,15 @@ For other IdPs (Authentik, Google, GitLab OIDC, …) adjust `OIDC_ISSUER` and, i
 
 The service worker maintains a versioned app-shell cache and prefers the network (`no-cache` for html/js/css) with a cache fallback. Increment `CACHE_VERSION` in `public/sw.js` whenever the app shell changes. PWA requires HTTPS or `localhost`.
 
+## Security headers
+
+Every response carries a strict CSP: `script-src 'self'` and `style-src 'self'`, **without** `'unsafe-inline'`. Two consequences for frontend work:
+
+- the first-paint theme script lives in `public/theme-init.js` (a blocking `<script src>` before the stylesheet) instead of an inline block;
+- inline `style="…"` attributes and `<style>` elements are not allowed — use classes.
+
+`connect-src` also lists the origin of `GP_API_URL`, because the client calls Globalping directly when the local quota path is used. `Strict-Transport-Security` is intentionally not sent: TLS terminates at your reverse proxy, so HSTS belongs there.
+
 ## Docker
 
 Published image: [`docker.io/yanranxiaoxi/pingatlas`](https://hub.docker.com/r/yanranxiaoxi/pingatlas) (`latest` follows the default branch).

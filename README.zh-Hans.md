@@ -161,6 +161,15 @@ pnpm typecheck       # tsc --noEmit
 
 服务工作线程维护带版本号的应用外壳缓存，优先走网络（html/js/css 使用 `no-cache`），失败时回退缓存。应用外壳变更后需提升 `public/sw.js` 中的 `CACHE_VERSION`。PWA 需要 HTTPS 或 `localhost`。
 
+## 安全响应头
+
+所有响应都带严格 CSP：`script-src 'self'`、`style-src 'self'`，**不使用** `'unsafe-inline'`。因此前端改动有两条约束：
+
+- 首屏主题脚本是独立文件 `public/theme-init.js`（在样式表之前的阻塞 `<script src>`），不再内联；
+- 不允许内联 `style="…"` 属性与 `<style>` 元素，请改用 class。
+
+`connect-src` 还包含 `GP_API_URL` 的 origin，因为走本机额度时会直连 Globalping。**有意不下发** `Strict-Transport-Security`：TLS 在反向代理终止，HSTS 应在那里配置。
+
 ## Docker
 
 已发布镜像：[`docker.io/yanranxiaoxi/pingatlas`](https://hub.docker.com/r/yanranxiaoxi/pingatlas)（`latest` 跟随默认分支）。
