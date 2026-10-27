@@ -145,7 +145,7 @@ pnpm typecheck       # tsc --noEmit
 | `GET` | `/api/auth/status` | `{ loggedIn, authEnabled, user }` |
 | `GET` | `/api/auth/login` | 302 → IdP |
 | `GET` | `/api/auth/callback` | OIDC 回调 → 写入会话 Cookie → `/` |
-| `GET` | `/api/auth/logout` | 清除会话 → `/` |
+| `GET` | `/api/auth/logout` | 清除会话 → `/`（仅接受同源请求） |
 | `GET` | `/api/limits` | 代理服务端代币的 `GET /v1/limits`（需登录 + `GP_TOKEN`） |
 | `GET` | `/api/probes` | 位置自动补全用的去重探针索引（公开、无需代币、不消耗额度） |
 | `POST` | `/api/measurements` | 代理 `POST /v1/measurements`（需登录 + `GP_TOKEN`） |
@@ -168,7 +168,9 @@ pnpm typecheck       # tsc --noEmit
 - 首屏主题脚本是独立文件 `public/theme-init.js`（在样式表之前的阻塞 `<script src>`），不再内联；
 - 不允许内联 `style="…"` 属性与 `<style>` 元素，请改用 class。
 
-`connect-src` 还包含 `GP_API_URL` 的 origin，因为走本机额度时会直连 Globalping。**有意不下发** `Strict-Transport-Security`：TLS 在反向代理终止，HSTS 应在那里配置。
+`connect-src` 还包含 `GP_API_URL` 的 origin，因为走本机额度时会直连 Globalping。
+
+登出仍保留 `GET /api/auth/logout`，因此服务端会拒绝跨站请求（依次比对 `Sec-Fetch-Site`、`Origin`/`Referer` 与 `Host`）——否则任意站点用一个普通链接就能把访客登出，因为 `SameSite=Lax` 在跨站顶层导航时仍会携带 Cookie。**有意不下发** `Strict-Transport-Security`：TLS 在反向代理终止，HSTS 应在那里配置。
 
 ## Docker
 

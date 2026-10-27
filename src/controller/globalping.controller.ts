@@ -228,6 +228,9 @@ class Globalping extends Controller {
 	 * @returns 通过校验返回 true；否则已写出 503 / 401 并返回 false
 	 */
 	private requireProxy(ctx: IContext): boolean {
+		// 本组接口都以会话为门控、且返回随用户/时间变化的数据（额度、测量结果），
+		// 不能让共享缓存或 CDN 复用给其他访问者
+		ctx.res.setHeader('Cache-Control', 'no-store');
 		if (!this.proxyAvailable()) {
 			sendJson(ctx.res, 503, { error: { type: 'proxy_unavailable', message: 'Server token is not configured' } });
 			return false;

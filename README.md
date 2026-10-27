@@ -146,7 +146,7 @@ For other IdPs (Authentik, Google, GitLab OIDC, …) adjust `OIDC_ISSUER` and, i
 | `GET` | `/api/auth/status` | `{ loggedIn, authEnabled, user }` |
 | `GET` | `/api/auth/login` | 302 → IdP |
 | `GET` | `/api/auth/callback` | OIDC callback → session cookie → `/` |
-| `GET` | `/api/auth/logout` | clears session → `/` |
+| `GET` | `/api/auth/logout` | clears session → `/` (same-origin only) |
 | `GET` | `/api/limits` | proxied `GET /v1/limits` of the server token (login + `GP_TOKEN` required) |
 | `GET` | `/api/probes` | de-duplicated probe index for location autocomplete (public, no token, no quota) |
 | `POST` | `/api/measurements` | proxied `POST /v1/measurements` (login + `GP_TOKEN` required) |
@@ -169,7 +169,9 @@ Every response carries a strict CSP: `script-src 'self'` and `style-src 'self'`,
 - the first-paint theme script lives in `public/theme-init.js` (a blocking `<script src>` before the stylesheet) instead of an inline block;
 - inline `style="…"` attributes and `<style>` elements are not allowed — use classes.
 
-`connect-src` also lists the origin of `GP_API_URL`, because the client calls Globalping directly when the local quota path is used. `Strict-Transport-Security` is intentionally not sent: TLS terminates at your reverse proxy, so HSTS belongs there.
+`connect-src` also lists the origin of `GP_API_URL`, because the client calls Globalping directly when the local quota path is used.
+
+Sign-out stays on `GET /api/auth/logout`, so the server rejects cross-site requests (via `Sec-Fetch-Site`, then `Origin`/`Referer` matched against `Host`) — otherwise any site could log a visitor out with a plain link, since `SameSite=Lax` still sends the cookie on top-level cross-site navigation. `Strict-Transport-Security` is intentionally not sent: TLS terminates at your reverse proxy, so HSTS belongs there.
 
 ## Docker
 

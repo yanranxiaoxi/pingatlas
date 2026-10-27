@@ -401,6 +401,120 @@ describe('GET /api/auth/logout', () => {
 		expect(buildEndSessionMock).not.toHaveBeenCalled();
 		expect(res.getHeader('location')).toBe('/');
 	});
+
+	describe('跨站请求防护', () => {
+		it('Sec-Fetch-Site: cross-site 时拒绝且不清除会话', async () => {
+			const { auth } = await loadModules();
+			const { ctx, res } = createMockContext({
+				url: '/api/auth/logout',
+				headers: { 'sec-fetch-site': 'cross-site' },
+			});
+
+			await auth.logout(ctx);
+
+			expect(res.statusCode).toBe(403);
+			expect(cookiesOf(res).some(cookie => cookie.startsWith('pa_session='))).toBe(false);
+		});
+
+		it('Sec-Fetch-Site: same-site 也拒绝（兄弟子域不受信任）', async () => {
+			const { auth } = await loadModules();
+			const { ctx, res } = createMockContext({
+				url: '/api/auth/logout',
+				headers: { 'sec-fetch-site': 'same-site' },
+			});
+
+			await auth.logout(ctx);
+
+			expect(res.statusCode).toBe(403);
+			expect(cookiesOf(res).some(cookie => cookie.startsWith('pa_session='))).toBe(false);
+		});
+
+		it('Sec-Fetch-Site: same-origin 时正常登出', async () => {
+			const { auth } = await loadModules();
+			const { ctx, res } = createMockContext({
+				url: '/api/auth/logout',
+				headers: { 'sec-fetch-site': 'same-origin' },
+			});
+
+			await auth.logout(ctx);
+
+			expect(res.getHeader('location')).toBe('/');
+			expect(cookieNamed(res, 'pa_session')).toContain('Max-Age=0');
+		});
+
+		it('Sec-Fetch-Site: none（地址栏直接访问）时正常登出', async () => {
+			const { auth } = await loadModules();
+			const { ctx, res } = createMockContext({
+				url: '/api/auth/logout',
+				headers: { 'sec-fetch-site': 'none' },
+			});
+
+			await auth.logout(ctx);
+
+			expect(cookieNamed(res, 'pa_session')).toContain('Max-Age=0');
+		});
+
+		it('无 Sec-Fetch-Site 时按 Origin 判断：跨源拒绝', async () => {
+			const { auth } = await loadModules();
+			const { ctx, res } = createMockContext({
+				url: '/api/auth/logout',
+				headers: { host: 'ping.example.test', origin: 'https://evil.example' },
+			});
+
+			await auth.logout(ctx);
+
+			expect(res.statusCode).toBe(403);
+			expect(cookiesOf(res).some(cookie => cookie.startsWith('pa_session='))).toBe(false);
+		});
+
+		it('无 Sec-Fetch-Site 时按 Origin 判断：同源放行', async () => {
+			const { auth } = await loadModules();
+			const { ctx, res } = createMockContext({
+				url: '/api/auth/logout',
+				headers: { host: 'ping.example.test', origin: 'https://ping.example.test' },
+			});
+
+			await auth.logout(ctx);
+
+			expect(cookieNamed(res, 'pa_session')).toContain('Max-Age=0');
+		});
+
+		it('只有 Host 与跨站 Referer 时拒绝', async () => {
+			const { auth } = await loadModules();
+			const { ctx, res } = createMockContext({
+				url: '/api/auth/logout',
+				headers: { host: 'ping.example.test', referer: 'https://evil.example/page' },
+			});
+
+			await auth.logout(ctx);
+
+			expect(res.statusCode).toBe(403);
+		});
+
+		it('只有 Host 与同源 Referer 时放行', async () => {
+			const { auth } = await loadModules();
+			const { ctx, res } = createMockContext({
+				url: '/api/auth/logout',
+				headers: { host: 'ping.example.test', referer: 'https://ping.example.test/settings' },
+			});
+
+			await auth.logout(ctx);
+
+			expect(cookieNamed(res, 'pa_session')).toContain('Max-Age=0');
+		});
+
+		it('完全没有任何来源头时放行（旧浏览器/脚本无法判断来源）', async () => {
+			const { auth } = await loadModules();
+			const { ctx, res } = createMockContext({
+				url: '/api/auth/logout',
+				headers: { host: 'ping.example.test' },
+			});
+
+			await auth.logout(ctx);
+
+			expect(cookieNamed(res, 'pa_session')).toContain('Max-Age=0');
+		});
+	});
 });
 
 describe('Cookie 安全属性', () => {
