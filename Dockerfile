@@ -13,7 +13,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN corepack enable && corepack prepare pnpm@11.7.0 --activate && pnpm install --prod --frozen-lockfile
 # dist/ 内含 index.js（后端）与 public/（前端静态资源）
 COPY ./dist/ ./
-# 日志目录（winston daily-rotate 需可写）
-RUN mkdir -p ./logs
+# 只把日志目录交给非 root 用户：应用代码保持 root 所有，
+# 即使出现文件写入类缺陷也无法改写 index.js 在容器内持久化
+RUN mkdir -p ./logs && chown node:node ./logs
+# 以非 root 运行：任何文件写入类缺陷都不再等同于容器内 root 权限
+USER node
 EXPOSE 3001/tcp
 ENTRYPOINT [ "node", "/home/node/app/index.js" ]

@@ -176,6 +176,8 @@ pnpm typecheck       # tsc --noEmit
 
 已发布镜像：[`docker.io/yanranxiaoxi/pingatlas`](https://hub.docker.com/r/yanranxiaoxi/pingatlas)（`latest` 跟随默认分支）。
 
+容器以非 root 的 `node` 用户运行，只有 `./logs` 可写；需要日志持久化时挂载该目录即可。
+
 ```bash
 docker run -d --name pingatlas \
   -p 3001:3001 \
