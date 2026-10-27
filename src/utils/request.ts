@@ -3,6 +3,13 @@ import { Buffer } from 'node:buffer';
 
 /** JSON 请求体最大字节数（超限拒绝，防内存 DoS） */
 export const MAX_JSON_BODY = 2 * 1024 * 1024;
+/**
+ * 上游响应体最大字节数（超限中断读取，防异常响应撑爆内存）
+ *
+ * 比翻译项目更宽松：500 个 probe 的 MTR / HTTP 测量结果本身就可能达到数 MiB，
+ * 这里只拦截病态响应，不限制正常测量。
+ */
+export const MAX_UPSTREAM_BODY = 16 * 1024 * 1024;
 /** 上游代理请求超时（毫秒） */
 export const UPSTREAM_TIMEOUT = 30 * 1000;
 
@@ -35,6 +42,52 @@ export async function readJsonBody(req: IncomingMessage): Promise<Record<string,
 		return {};
 	}
 	return JSON.parse(raw) as Record<string, unknown>;
+}
+
+/**
+ * 读取上游响应文本（带上限）
+ * @param response - 上游响应
+ * @param max - 字节上限
+ * @returns 正常时返回文本；超限返回 null（已中断读取）
+ */
+export async function readTextWithLimit(response: Response, max = MAX_UPSTREAM_BODY): Promise<string | null> {
+	const declared = Number(response.headers.get('content-length'));
+	if (Number.isFinite(declared) && declared > max) {
+		await response.body?.cancel().catch(() => {});
+		return null;
+	}
+	if (!response.body) {
+		return '';
+	}
+
+	const reader = response.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let size = 0;
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			size += value.byteLength;
+			if (size > max) {
+				await reader.cancel().catch(() => {});
+				return null;
+			}
+			chunks.push(value);
+		}
+	}
+	finally {
+		reader.releaseLock();
+	}
+
+	const merged = new Uint8Array(size);
+	let offset = 0;
+	for (const chunk of chunks) {
+		merged.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return new TextDecoder().decode(merged);
 }
 
 /**

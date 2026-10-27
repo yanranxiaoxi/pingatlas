@@ -880,6 +880,7 @@ describe('错误文案映射', () => {
 		[413, 'payload_too_large', 't:errorPayloadTooLarge'],
 		[503, 'proxy_unavailable', 't:errorProxyUnavailable'],
 		[500, 'upstream_error', 't:errorUpstream'],
+		[502, 'response_too_large', 't:errorResponseTooLarge'],
 	])('类型 %s/%s → %s', async (status, type, expected) => {
 		await boot();
 		field('target').value = 'example.com';

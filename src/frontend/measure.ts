@@ -33,6 +33,7 @@ const ERROR_TYPE_KEYS: Record<string, string> = {
 	payload_too_large: 'errorPayloadTooLarge',
 	proxy_unavailable: 'errorProxyUnavailable',
 	upstream_error: 'errorUpstream',
+	response_too_large: 'errorResponseTooLarge',
 	internal_error: 'errorUpstream',
 };
 

@@ -3,7 +3,7 @@ import type { ProbeIndexData, ProbeRecord, RawProbe } from '../utils/probe-index
 import * as packageJson from '../../package.json';
 import { CONFIG } from '../config/config';
 import { buildProbeIndex, buildProbeList } from '../utils/probe-index';
-import { exceedsContentLength, readJsonBody } from '../utils/request';
+import { exceedsContentLength, MAX_UPSTREAM_BODY, readJsonBody, readTextWithLimit } from '../utils/request';
 import { getSessionUser, sendJson } from '../utils/respond';
 import { Controller } from './controller';
 
@@ -41,6 +41,8 @@ const PASSTHROUGH_HEADERS = [
 
 /** 上游不可达 / 超时的统一错误体（结构对齐 Globalping 报错体，前端可复用同一套渲染） */
 const UPSTREAM_ERROR = { error: { type: 'upstream_error', message: 'Globalping API is unreachable' } };
+/** 上游响应超过本地缓冲上限：不限制用量，只避免病态响应耗尽内存 */
+const RESPONSE_TOO_LARGE = { error: { type: 'response_too_large', message: 'Upstream response exceeds the local buffer limit' } };
 
 /** 探针索引进程内缓存（含过期时刻） */
 let probeIndexCache: { index: ProbeIndexData; list: ProbeRecord[]; expiresAt: number } | null = null;
@@ -274,7 +276,20 @@ class Globalping extends Controller {
 			return;
 		}
 
-		const text = await upstream.text().catch(() => '');
+		// 读取失败（连接中断等）时按空响应处理，保持与既有行为一致；超限则明确报错
+		let text: string | null;
+		try {
+			text = await readTextWithLimit(upstream);
+		}
+		catch (ex) {
+			ctx.logger.warn('globalping upstream body read failed', ex);
+			text = '';
+		}
+		if (text === null) {
+			ctx.logger.warn(`globalping upstream response exceeded ${MAX_UPSTREAM_BODY} bytes`);
+			sendJson(ctx.res, 502, RESPONSE_TOO_LARGE);
+			return;
+		}
 		for (const name of PASSTHROUGH_HEADERS) {
 			const value = upstream.headers.get(name);
 			if (value) {

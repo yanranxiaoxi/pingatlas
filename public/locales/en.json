@@ -180,6 +180,7 @@
 	"errorTooManyRequests": "The quota is used up or requests are too frequent. Please try again later.",
 	"errorPayloadTooLarge": "The request payload is too large. Please reduce the parameters and try again.",
 	"errorUpstream": "The Globalping API is temporarily unavailable. Please try again later.",
+	"errorResponseTooLarge": "The upstream result was too large to read. Reduce the probe count or shorten the timeout and try again.",
 	"errorProxyUnavailable": "The shared account quota is not configured on this site and is unavailable.",
 	"measurementBusy": "A measurement is already running.",
 	"login": "Sign in",

@@ -180,6 +180,7 @@
 	"errorTooManyRequests": "额度已用尽或请求过于频繁，请稍后重试。",
 	"errorPayloadTooLarge": "请求内容过大，请减少参数后重试。",
 	"errorUpstream": "上游 Globalping 接口暂时不可用，请稍后重试。",
+	"errorResponseTooLarge": "上游返回的结果过大，已中止读取。请减少节点数量或缩短超时后重试。",
 	"errorProxyUnavailable": "本站未配置公共账号额度，当前不可用。",
 	"measurementBusy": "已有测量正在进行中。",
 	"login": "登录",
